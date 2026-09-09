@@ -1,3 +1,8 @@
-# Skills instaladas por comando (npx skills add / git clone) — não versionadas.
-# Ver docs/comandos-para-rodar.md, seção 8, e skills-lock.json (esse sim versionado).
-.claude/skills/*
+# Lixo de SO/editor
+.DS_Store
+Thumbs.db
+
+# Caso algum dia esse repo precise de config local própria (não deveria guardar segredo nenhum,
+# mas se aparecer .env aqui por engano, não versiona)
+.env
+.env.local
