@@ -1,8 +1,16 @@
 # Agent: configuração de ambiente
 
-Escopo: máquina local (Etapa 1, sem projeto) e qualquer projeto nascido de `ai-base` (Etapa 2, com projeto). Repos-fonte: `../../../../ai-base` e `../../../../infra` (pastas irmãs de `ai-ops`, 4 níveis acima desta pasta — confirme com `ls` antes de usar o caminho às cegas). Nunca decide nada fora do fluxo abaixo.
+Escopo: máquina local (Etapa 1, sem projeto) e qualquer projeto clonado de `ai-base` (Etapa 2, com projeto). Repos-alvo: `../../../../ai-base` e `../../../../infra` (pastas irmãs de `ai-ops`, 4 níveis acima desta pasta — confirme com `ls` antes de usar o caminho às cegas). Nunca decide nada fora do fluxo abaixo.
 
-**Regra de leitura:** cada item abaixo aponta o `.md` de `docs/` (nunca `docs-human/`) que tem o procedimento exato — sempre ler antes de executar aquele item. `docs-human/` é fonte proibida pra este agent: escrita pro Daniel digitar ele mesmo, não pra agent seguir. Se algum dia um item precisar de algo que só existe em `docs-human/`, parar e reportar que falta a versão `docs/` — nunca ler o `docs-human/` como substituto. Nunca ler `ai-base/docs/agents/*.md` fora de `infra-local.md`/`observabilidade-backup.md`/`security-review.md` citados abaixo — o resto (`domain.md`, `orchestration.md`, `workflow.md`, `esteira-deploy.md`, `issue-tracker.md`, `triage-labels.md`) é doc de uso **durante** o projeto (Claude Code arquiteto, subagents do `pi.dev`), fora do seu escopo.
+**Este agent nunca altera nada dentro do próprio repositório `ai-ops`** — nem mesmo a própria pasta (`agents/infra/local-environment-config/`). Isso não é um item que para e pergunta, é fora do fluxo inteiro: `ai-ops` é onde este agent mora, não algo que ele configura.
+
+**Regra de desambiguação de caminho:** este agent **não lê nenhum doc de dentro de `ai-base`** — toda instrução de setup de máquina (o que hoje seria `docs/agents`, `docs/design`, `docs/environment`, `docs/tools` de um `ai-base` isolado) vive nesta própria pasta do agent. `ai-base` continua sendo um **alvo** de operação na Etapa 1 (clonar, instalar skills nele, criar `.mcp.json` nele, testar com `pi` dentro dele) — só não é mais lido como fonte de instrução. Um caminho citado abaixo sem prefixo de repo é sempre um destes três, nunca ambíguo:
+
+- `docs/enviroment/...`, `docs/infra/...`, `docs/tools/...` → dentro desta pasta do agent (só essas três subpastas existem aqui — instrução, não alvo).
+- `infra/...` → dentro do repositório `infra` (pasta irmã) — alvo.
+- `docs/agents/...`, `docs/design/...` (só aparecem na Etapa 2) → dentro da pasta do **projeto** sendo configurado — que é sempre um clone de `ai-base` (novo ou já em andamento), nunca uma leitura à parte num `ai-base` isolado. O que hoje é `infra-local.md`/`observabilidade-backup.md`/`security-review.md`/`component-library.md`/`tokens.md`/`principios.md` citados abaixo são arquivos que o próprio projeto já tem, herdados do clone.
+
+**Regra de leitura:** cada item abaixo aponta o `.md` (desta pasta, do `infra`, ou do projeto, pela regra acima) que tem o procedimento exato — sempre ler antes de executar aquele item. `docs-human/` é fonte proibida pra este agent, em qualquer um desses lugares: escrita pro humano digitar ele mesmo, nunca pra agent seguir. Se algum dia um item precisar de algo que só existe em `docs-human/`, parar e reportar que falta a versão `docs/` — nunca ler o `docs-human/` como substituto. Na Etapa 2, `docs/agents/domain.md`, `orchestration.md`, `workflow.md`, `esteira-deploy.md`, `issue-tracker.md`, `triage-labels.md` dentro do projeto são doc de uso **durante** o projeto (Claude Code arquiteto, subagents do `pi.dev`), fora do escopo deste agent — só os citados explicitamente abaixo importam aqui.
 
 ## Fluxo obrigatório — toda etapa, todo item
 
@@ -54,30 +62,32 @@ Roda uma vez por máquina, sem nenhum projeto envolvido.
    - Docker Desktop: `https://www.docker.com/products/docker-desktop/`.
    Depois de o humano informar que instalou/atualizou, o agent só reverifica (`node -v`, `git --version`, `code --version`, `docker --version`) — nunca assume, nunca segue sem essa confirmação.
 3. Instalar Claude Code (instalador nativo, não npm — `irm https://claude.ai/install.ps1 | iex`), se ausente. Confirmar `claude --version`.
-4. `ai-base/docs/environment/pi-dev.md` — instalar `pi.dev` + adapter de MCP (só o que faltou nos passos 1-2).
-5. `ai-base/docs/environment/api-keys.md` — chaves de API (verificar presença, nunca o valor): `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, `GITLAB_TOKEN`, `GITHUB_TOKEN`.
-6. `ai-base/docs/environment/alethe.md` — Alethe.
-7. `ai-base/docs/environment/glab.md` — `glab` (instalar + autenticar).
+4. `docs/enviroment/pi-dev.md` — instalar `pi.dev` + adapter de MCP (só o que faltou nos passos 1-2).
+5. `docs/enviroment/api-keys.md` — chaves de API (verificar presença, nunca o valor): `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, `GITLAB_TOKEN`, `GITHUB_TOKEN`.
+6. `docs/enviroment/alethe.md` — Alethe.
+7. `docs/enviroment/glab.md` — `glab` (instalar + autenticar).
 8. **Clonar `ai-base` e `infra`, se ausentes.** Confirmar com `ls` se `../../../../ai-base` e `../../../../infra` já existem. Se não: com `glab` já autenticado (passo 7), `glab repo clone personal.daniel.bmend/ai-base` e `glab repo clone personal.daniel.bmend/infra`, clonando nas pastas irmãs corretas de `ai-ops` (nunca `git clone` com o token embutido na URL — vaza em `git remote -v`/histórico). Sem os dois repos, nenhum item abaixo funciona.
-9. `ai-base/docs/environment/smoke-test.md` — testar tudo junto (`pi`/`/model`).
-10. `ai-base/docs/environment/skills.md` — skills do `ai-base` (Matt Pocock, Angular, `avoid-ai-design`). Confirmar via `/skills`.
+9. `docs/enviroment/smoke-test.md` — testar tudo junto (`pi`/`/model`).
+10. `docs/enviroment/skills.md` — skills do `ai-base` (Matt Pocock, Angular, `avoid-ai-design`). Confirmar via `/skills`.
 11. `npm install -g @angular/cli` (versão mais recente publicada — nunca fixar em uma versão específica neste arquivo).
-12. `ai-base/docs/tools/rtk.md` — RTK, opcional. Perguntar ao humano se quer instalar antes de rodar.
-13. Criar `ai-base/.mcp.json` (hoje não existe) — bloco GitLab, `"disabled": true`. Procedimento e template: `infra/docs/mcp-setup.md` + `infra/docs/mcp-snippets.md`.
+12. `docs/tools/rtk.md` — RTK, opcional. Perguntar ao humano se quer instalar antes de rodar.
+13. Criar `ai-base/.mcp.json` (hoje não existe) — bloco GitLab, `"disabled": true`. Procedimento e template: `docs/infra/mcp-setup.md` + `docs/infra/mcp-snippets.md`.
 14. Claude Desktop e Figma (MCP): config de máquina, manual, fora do escopo deste agent — só informar ao humano que existe, nunca configurar.
-15. Infra compartilhada — seguir `infra/docs/container-bootstrap.md` do início ao fim (procedimento já escrito pra agent: verificar `.env`, subir, confirmar saúde, devolver relatório).
+15. Infra compartilhada — seguir `docs/infra/container-bootstrap.md` do início ao fim (procedimento já escrito pra agent: verificar `.env`, subir, confirmar saúde, devolver relatório).
 16. VS Code — instalar extensões e criar os 4 profiles conforme `infra/configs/vscode/profiles.md` (extensões via `code --install-extension <id>`, criação do profile e colagem do `settings.json` → depende do humano, sem CLI pra isso).
-17. `ai-base/docs/environment/google-drive.md` — Google Drive for Desktop.
-18. Kubernetes local — seguir `infra/docs/kubernetes-local.md` do início ao fim (procedimento já escrito pra agent: verificar, instalar, confirmar consumo de recurso com o humano, registrar GitLab Agent com token do humano, devolver relatório).
+17. `docs/enviroment/google-drive.md` — Google Drive for Desktop.
+18. Kubernetes local — seguir `docs/infra/kubernetes-local.md` do início ao fim (procedimento já escrito pra agent: verificar, instalar, confirmar consumo de recurso com o humano, registrar GitLab Agent com token do humano, devolver relatório).
 19. Relatório final: versão de cada ferramenta, serviço/porta/URL de cada container, onde cada credencial nova ficou, comando de teste por item.
 
 ## ETAPA 2 — Configuração de projeto (existente ou novo)
 
-Invocado de dentro da pasta do projeto, ou com o caminho informado. Pré-requisito: Etapa 1 concluída (`docker compose ps` do `infra` saudável, `pi --version`, `claude --version` respondem) — se não, parar e informar que a Etapa 1 precisa rodar primeiro.
+**Pré-requisito de invocação:** esta etapa só começa se o humano chamou o agent de dentro da pasta do projeto, ou informou explicitamente o caminho do projeto. Sem um dos dois, o agent não sabe qual pasta configurar — parar e pedir um ou outro antes de continuar, nunca assumir/adivinhar qual projeto é.
+
+Pré-requisito de máquina: Etapa 1 concluída (`docker compose ps` do `infra` saudável, `pi --version`, `claude --version` respondem) — se não, parar e informar que a Etapa 1 precisa rodar primeiro.
 
 **Fora de escopo desta etapa, sempre:** iniciar o projeto em si (`ng new`, `dotnet new` ou equivalente) e qualquer decisão de arquitetura/domínio. Este agent só instala e configura dependências e infra ao redor do projeto (CLI, SDK, banco, MCP, observabilidade, design system, Playwright). Criar o projeto e o código dele é o `/grill-me` → spec → implementação (Claude Code arquiteto + subagents do `pi.dev`), nunca este fluxo.
 
-**Detectar novo vs. existente**: arquivo raiz do template (ex.: `docs-human/comandos-para-rodar.md`) ainda presente na pasta do projeto → **novo** (ainda não passou pela limpeza, passo 8 roda). Ausente → **existente** (pula os passos de scaffold e o passo 8; detecta stack pelo código já existente).
+**Detectar novo vs. existente**: nunca inferir sozinho (não existe mais sinal de arquivo confiável pra isso). Perguntar direto ao humano: "este projeto acabou de nascer de um clone do `ai-base` (novo) ou já é um projeto em andamento (existente)?" — **novo** roda os passos de scaffold e o passo 8; **existente** pula os dois (detecta stack pelo código já existente).
 
 ### Se "novo": primeiro pergunte a stack — nunca assuma
 
@@ -89,11 +99,10 @@ O `ai-base` fixa Angular como frontend padrão (React só se a spec explicitamen
 ### Passos (novo e existente)
 
 1. Detectar stack (projeto "existente"): `.csproj` → backend .NET; `angular.json`/`@angular/core` no `package.json` → frontend Angular. Projeto "novo": usar a resposta da pergunta acima em vez de detectar.
-2. Provisionar infra pro projeto (nome = nome da pasta, a menos que informado outro): banco Postgres, vhost RabbitMQ, realm Keycloak, ACL Redis. Regra geral: `ai-base/docs/agents/infra-local.md`. Comandos exatos: `ai-base/docs/environment/project-provisioning.md`. Credencial gerada aqui: nunca hardcoded, avisar onde ficou guardada.
-3. `.mcp.json` do projeto: bloco GitLab sempre (`"disabled": true`), GitHub só se o projeto precisar. Procedimento e template: `infra/docs/mcp-setup.md` + `infra/docs/mcp-snippets.md`. Confirmar que a variável de ambiente referenciada já existe (Etapa 1, item 5) antes de escrever `${VAR}`.
-4. `/health`, `/metrics`, log JSON no backend .NET (ou equivalente da stack escolhida) e registro em `infra/container/prometheus.yml`: regra em `ai-base/docs/agents/observabilidade-backup.md`. Verificar presença, não implementar — ausente = reportar como pendência de código pro humano/Claude Code.
-5. Se frontend Angular: instalar PrimeNG (`npm install primeng @primeng/themes`), Tailwind (`ng add tailwindcss`), `ui-ux-pro-max-cli` (`npm install -g ui-ux-pro-max-cli` + `uipro init --ai claude`), `impeccable` (`npx impeccable install`, exige Node 22.12+ → depende do humano se não tiver). Referência de biblioteca/tokens/ordem da cadeia: `ai-base/docs/design/component-library.md`, `ai-base/docs/design/tokens.md`, `ai-base/docs/design/principios.md`. Rodar `/impeccable init`/`detect`/`audit` dentro de uma sessão Claude Code depois.
+2. Provisionar infra pro projeto (nome = nome da pasta, a menos que informado outro): banco Postgres, vhost RabbitMQ, realm Keycloak, ACL Redis. Regra geral: `docs/agents/infra-local.md` (dentro da pasta do projeto). Comandos exatos: `docs/enviroment/project-provisioning.md` (deste agent). Credencial gerada aqui: nunca hardcoded, avisar onde ficou guardada.
+3. `.mcp.json` do projeto: bloco GitLab sempre (`"disabled": true`), GitHub só se o projeto precisar. Procedimento e template: `docs/infra/mcp-setup.md` + `docs/infra/mcp-snippets.md` (deste agent). Confirmar que a variável de ambiente referenciada já existe (Etapa 1, item 5) antes de escrever `${VAR}`.
+4. `/health`, `/metrics`, log JSON no backend .NET (ou equivalente da stack escolhida) e registro em `infra/container/prometheus.yml`: regra em `docs/agents/observabilidade-backup.md` (dentro da pasta do projeto). Verificar presença, não implementar — ausente = reportar como pendência de código pro humano/Claude Code.
+5. Se frontend Angular: instalar PrimeNG (`npm install primeng @primeng/themes`), Tailwind (`ng add tailwindcss`), `ui-ux-pro-max-cli` (`npm install -g ui-ux-pro-max-cli` + `uipro init --ai claude`), `impeccable` (`npx impeccable install`, exige Node 22.12+ → depende do humano se não tiver). Referência de biblioteca/tokens/ordem da cadeia: `docs/design/component-library.md`, `docs/design/tokens.md`, `docs/design/principios.md` (todos dentro da pasta do projeto). Rodar `/impeccable init`/`detect`/`audit` dentro de uma sessão Claude Code depois.
 6. Playwright via Docker: confirmar a tag mais recente em `https://mcr.microsoft.com/en-us/product/playwright/tags` antes de puxar (nunca fixar tag antiga), `docker pull mcr.microsoft.com/playwright:<tag-atual>`.
-7. Skills de segurança — só se pedido explicitamente pro projeto: `ai-base/docs/agents/security-review.md` (fluxo) e `ai-base/docs/environment/security-skills.md` (comandos, seletivo — nunca "Select All"). Confirmar `disable-model-invocation: true` em cada `SKILL.md` instalado.
-8. **Se "novo"**: apagar `docs-human/comandos-para-rodar.md`, `docs-human/runbook.md`, `docs-human/pendencias.md`, `docs-human/pratices/` (inteiro) — notas de máquina do Daniel, não do projeto. Esvaziar `docs-human/` (mantém a pasta vazia, o projeto documenta suas próprias decisões dali pra frente). Confirmação nominal antes de apagar (regra de "deletar config em uso").
-9. Relatório final: o que foi configurado nesse projeto (incluindo stack escolhida e versões usadas), onde acessar, onde cada credencial nova ficou, comando de teste por item.
+7. Skills de segurança — só se pedido explicitamente pro projeto: `docs/agents/security-review.md` (fluxo, dentro da pasta do projeto) e `docs/enviroment/security-skills.md` (comandos, deste agent, seletivo — nunca "Select All"). Confirmar `disable-model-invocation: true` em cada `SKILL.md` instalado.
+8. Relatório final: o que foi configurado nesse projeto (incluindo stack escolhida e versões usadas), onde acessar, onde cada credencial nova ficou, comando de teste por item.

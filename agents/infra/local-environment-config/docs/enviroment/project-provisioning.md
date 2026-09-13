@@ -1,12 +1,12 @@
 # Nascimento de projeto novo — provisionar na infra compartilhada
 
-Roda toda vez que um projeto novo precisa apontar pra infra do repo `infra` (containers já de pé — ver `infra/docs/container-bootstrap.md`). `<projeto>` = nome do projeto.
+Roda toda vez que um projeto novo precisa apontar pra infra compartilhada (repositório `infra`, containers já de pé — ver `docs/infra/container-bootstrap.md` deste agent). `<projeto>` = nome do projeto.
 
 **Postgres** — criar o banco:
 ```powershell
 docker exec -it <container-postgres> psql -U postgres -c "CREATE DATABASE <projeto>;"
 ```
-Depois criar `infra/banco/<projeto>/init-db.sql` (organização interna do banco é decisão do projeto, sem padrão obrigatório aqui).
+Depois criar `infra/banco/<projeto>/init-db.sql` (dentro do repositório `infra`, não deste agent — organização interna do banco é decisão do projeto, sem padrão obrigatório aqui).
 
 **RabbitMQ** — criar o vhost:
 ```powershell
