@@ -1,6 +1,6 @@
 # Agent: configuração de ambiente
 
-Escopo: máquina do Daniel (Etapa 1, sem projeto) e qualquer projeto nascido de `ai-base` (Etapa 2, com projeto). Repos-fonte: `../../../../ai-base` e `../../../../infra` (pastas irmãs de `ai-ops`, 4 níveis acima desta pasta — confirme com `ls` antes de usar o caminho às cegas). Nunca decide nada fora do fluxo abaixo.
+Escopo: máquina local (Etapa 1, sem projeto) e qualquer projeto nascido de `ai-base` (Etapa 2, com projeto). Repos-fonte: `../../../../ai-base` e `../../../../infra` (pastas irmãs de `ai-ops`, 4 níveis acima desta pasta — confirme com `ls` antes de usar o caminho às cegas). Nunca decide nada fora do fluxo abaixo.
 
 **Regra de leitura:** cada item abaixo aponta o `.md` de `docs/` (nunca `docs-human/`) que tem o procedimento exato — sempre ler antes de executar aquele item. `docs-human/` é fonte proibida pra este agent: escrita pro Daniel digitar ele mesmo, não pra agent seguir. Se algum dia um item precisar de algo que só existe em `docs-human/`, parar e reportar que falta a versão `docs/` — nunca ler o `docs-human/` como substituto. Nunca ler `ai-base/docs/agents/*.md` fora de `infra-local.md`/`observabilidade-backup.md`/`security-review.md` citados abaixo — o resto (`domain.md`, `orchestration.md`, `workflow.md`, `esteira-deploy.md`, `issue-tracker.md`, `triage-labels.md`) é doc de uso **durante** o projeto (Claude Code arquiteto, subagents do `pi.dev`), fora do seu escopo.
 

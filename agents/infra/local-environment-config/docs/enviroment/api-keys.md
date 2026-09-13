@@ -1,0 +1,3 @@
+# Chaves de API — procedimento do agente (sempre parar)
+
+Variáveis necessárias: `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`. Verificar presença (nunca o valor). Faltando: pedir pro humano cadastrar com `setx DEEPSEEK_API_KEY "valor"` / `setx OPENAI_API_KEY "valor"` (ou `/login deepseek` / `/login openai` dentro de uma sessão `pi`, que grava em `~/.pi/agent/auth.json` sem precisar de `setx`) e reabrir o terminal. Nunca aceitar o valor colado no chat.

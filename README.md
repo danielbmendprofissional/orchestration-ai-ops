@@ -1,10 +1,8 @@
 # ai-ops
 
-Repo separado do `ai-base` (template, copiado por projeto) e do `infra` (serviço rodando de verdade). Guarda automação que não pertence a nenhum projeto específico e não deve ser multiplicada por N cópias — agents que operam sobre `ai-base`/`infra`/outros repos, não código de aplicação.
+Repo geral de AI apartados de projetos, inclui agents, skills, instructions que eu mesmo fiz, documentação (docs-human) referente a ai-base, infra, template, conceitos
 
-Precisa estar clonado como pasta irmã de `ai-base` e `infra` (mesma pasta pai) — os agents daqui leem regra de um e escrevem no outro por caminho relativo.
-
-## Estrutura
+## Estrutura - Agents
 
 Cada agent vive na sua própria pasta, organizada por domínio:
 

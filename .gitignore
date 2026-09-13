@@ -6,3 +6,7 @@ Thumbs.db
 # mas se aparecer .env aqui por engano, não versiona)
 .env
 .env.local
+
+Claude outputs/*
+Claude outputs/
+Claude outputs
