@@ -17,6 +17,7 @@ PATH novo só é lido num terminal novo → **parar aqui**, pedir pro humano fec
 ```powershell
 rtk init -g
 rtk init -g --opencode
+rtk init -g --agent pi
 ```
 
 Confirmar: `rtk init --show` (hook nativo, `RTK.md`, `settings.json`).
@@ -25,6 +26,3 @@ Confirmar: `rtk init --show` (hook nativo, `RTK.md`, `settings.json`).
 
 Hook do RTK pode desaparecer de `settings.json` depois do primeiro comando (Claude Code reescreve o arquivo) — reinstalar (`rtk init -g`) resolve. `ls`, `wc`, `dir`, `echo` podem falhar via RTK no PowerShell (são aliases/built-ins).
 
-## Uso (fora do escopo de instalação, referência)
-
-Ligar quando `pi` suportar o agente específico (`rtk init -g --agent pi`, confirmar antes de assumir suporte).

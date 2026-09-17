@@ -2,6 +2,18 @@
 
 Todos os caminhos abaixo são dentro do repositório `infra` (não deste agent). `infra/container/.env` guarda segredo real (mesmo que só de dev) — nunca ler o conteúdo dele em voz alta (log, relatório, chat) e nunca preencher valor sozinho.
 
+## 0. Docker Desktop está rodando?
+
+**Sempre checar antes de qualquer comando `docker`/`docker compose` daqui pra baixo** — nunca rodar `docker compose up`/`docker info` direto e ficar esperando: se o Docker Desktop não estiver aberto, o CLI do Docker no Windows pode levar minutos tentando conectar no daemon antes de desistir. Checar primeiro se o **processo** está de pé (isso é instantâneo, não toca o daemon):
+
+```powershell
+Get-Process "Docker Desktop" -ErrorAction SilentlyContinue
+```
+
+Não retornou nada (processo não existe): **Docker Desktop já deveria estar instalado** (Etapa 1, item 2 — sempre depende do humano). Se chegou até aqui e não está rodando, é só o app fechado: **parar aqui**, pedir pro humano abrir o Docker Desktop (não tentar abrir sozinho, é GUI) e confirmar quando estiver pronto. Nunca ficar tentando de novo sozinho nem esperando.
+
+Retornou o processo: só então rodar `docker info` pra confirmar que o daemon já respondeu (pode levar alguns segundos enquanto o Docker Desktop ainda está subindo) — se der erro mesmo com o processo de pé, reportar que ainda está inicializando e pedir pro humano confirmar quando o ícone da bandeja mostrar "Docker Desktop is running".
+
 ## 1. Verificar
 
 `infra/container/.env` existe? Se não existir: **parar aqui**, copiar `infra/container/examples/env.example` pra `infra/container/.env` só como esqueleto (valores placeholder), e devolver pro humano pedindo pra preencher os valores reais direto no arquivo (cada chave já vem comentada no próprio `env.example`) — nunca inventar senha/segredo.

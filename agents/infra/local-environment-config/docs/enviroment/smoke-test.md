@@ -1,6 +1,6 @@
 # Testar tudo junto — procedimento do agente
 
-Roda dentro da pasta de um projeto real (clone de `ai-base` — não existe uma pasta `ai-base` fixa e persistente pra rodar isso uma vez só; o teste depende de `.pi/agents/*.md` existir, e isso só existe dentro de um clone):
+Roda dentro da pasta do projeto sendo configurado — o teste depende de `.pi/agents/*.md` existir dentro dela, então não roda antes da Etapa 2 nem pode ser reaproveitado de outro projeto:
 
 ```powershell
 pi

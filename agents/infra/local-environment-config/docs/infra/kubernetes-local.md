@@ -2,7 +2,13 @@
 
 Valida cluster + operators + GitLab Agent conectado, na máquina local, zero custo de nuvem. Não é a arquitetura de produção (AWS/EC2/Let's Encrypt — fora do escopo de qualquer agent, decisão/execução do humano) e não deploya aplicação nenhuma dentro dos clusters — falta um job `deploy-kubernetes` no `template-ci` que ainda não existe.
 
-Pré-requisito: Docker Desktop rodando (`docker info` responde). Se não: **parar aqui**, devolver pro humano — não tentar abrir o app sozinho (GUI).
+Pré-requisito: Docker Desktop rodando. **Checar via processo, nunca via `docker info` direto** (`docker info` pode levar minutos tentando conectar se o app estiver fechado — ver `docs/infra/container-bootstrap.md`, item 0):
+
+```powershell
+Get-Process "Docker Desktop" -ErrorAction SilentlyContinue
+```
+
+Não retornou nada: **parar aqui**, devolver pro humano — não tentar abrir o app sozinho (GUI). Retornou: só então confirmar com `docker info` que o daemon já respondeu.
 
 ## 1. Verificar o que já está instalado
 
@@ -15,11 +21,33 @@ docker info
 
 ## 2. Instalar o que faltou (um de cada vez, confirmando antes de seguir)
 
+**`k3d` e `helm`: nunca `winget install`** — nesta máquina, sem Developer Mode/admin, o passo de registrar PATH desses pacotes "portable" pode falhar em silêncio (binário fica instalado, comando não é encontrado). Baixar o binário oficial direto e registrar o PATH manualmente, mesmo padrão do RTK (`docs/tools/rtk.md`) e do `glab` (`docs/enviroment/glab.md`) — sem privilégio elevado:
+
 ```powershell
-winget install k3d
-winget install Kubernetes.kubectl
-winget install Helm.Helm
+$binDir = "$env:USERPROFILE\.local\bin"
+New-Item -ItemType Directory -Force -Path $binDir | Out-Null
+
+# k3d — asset já vem como .exe único, sem versão no nome (alias "latest" do GitHub funciona)
+Invoke-WebRequest -Uri "https://github.com/k3d-io/k3d/releases/latest/download/k3d-windows-amd64.exe" -OutFile "$binDir\k3d.exe"
+
+# helm — não fica hospedado nos assets do GitHub release, só em get.helm.sh; precisa da tag exata primeiro
+$helmTag = (Invoke-RestMethod "https://api.github.com/repos/helm/helm/releases/latest").tag_name
+Invoke-WebRequest -Uri "https://get.helm.sh/helm-$helmTag-windows-amd64.zip" -OutFile "$env:TEMP\helm.zip"
+Expand-Archive -Path "$env:TEMP\helm.zip" -DestinationPath "$env:TEMP\helm-extract" -Force
+Copy-Item "$env:TEMP\helm-extract\windows-amd64\helm.exe" "$binDir\helm.exe" -Force
+Remove-Item "$env:TEMP\helm.zip", "$env:TEMP\helm-extract" -Recurse -Force
+
+if (($env:Path -split ';') -notcontains $binDir) {
+    [Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$binDir", "User")
+}
 ```
+
+**`kubectl`: `winget install Kubernetes.kubectl`** continua — não apresentou esse problema até agora nesta máquina, mas é o mesmo risco em tese; se `where.exe kubectl` falhar depois de reaberto o terminal, trocar pro mesmo padrão acima usando `https://dl.k8s.io/release/$(Invoke-RestMethod https://dl.k8s.io/release/stable.txt)/bin/windows/amd64/kubectl.exe`.
+```powershell
+winget install Kubernetes.kubectl
+```
+
+**Verificação do PATH não é possível nesta sessão** (regra do `CLAUDE.md`, Fluxo obrigatório item 6, caso "depende de PATH") — confirmar só que `$binDir\k3d.exe` e `$binDir\helm.exe` existem em disco (isso é verificável aqui), e reportar ao humano: "binários instalados, PATH escrito, confirme com `k3d version` / `helm version` / `kubectl version --client` **num terminal novo de verdade**" — nunca como "concluído" sem essa ressalva.
 
 ## 3. Confirmar com o humano antes de consumir recurso real
 
@@ -96,7 +124,7 @@ Depois de cada operator instalado: criar 1 CR mínimo (`Cluster`/`Redis`/`Rabbit
 
 Token de registro só sai clicando na UI do GitLab (projeto → Operate → Kubernetes clusters → Connect a cluster). Não usar Personal Access Token pra isso via API mesmo sendo tecnicamente possível — escopo largo demais pra um agent segurar. **Parar aqui**, pedir pro humano gerar 1 token por cluster (2, um por ambiente) e colar de volta.
 
-No repo do projeto (não em `ai-base`/`infra`):
+No repo do próprio projeto (não em `infra`):
 ```yaml
 # .gitlab/agents/<projeto>-qa-local/config.yaml
 ci_access:

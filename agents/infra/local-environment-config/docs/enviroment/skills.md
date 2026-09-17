@@ -1,6 +1,6 @@
 # Skills base de projeto — procedimento do agente (idempotente)
 
-Roda dentro da pasta do projeto sendo configurado (todo projeto é um clone de `ai-base` — não existe uma pasta `ai-base` fixa pra instalar isso uma vez só e valer pra sempre; `.claude/skills/` não é versionado no git, então cada clone precisa rodar isso de novo):
+Roda dentro da pasta do projeto sendo configurado — `.claude/skills/` não é versionado no git, então cada projeto precisa rodar isso, mesmo que outro projeto já tenha rodado antes:
 
 ```powershell
 npx skills add https://github.com/mattpocock/skills -s '*' -a claude-code -y
