@@ -20,30 +20,41 @@ Retornou o processo: só então rodar `docker info` pra confirmar que o daemon j
 
 Se `.env` já existe: confirmar que todas as chaves que `infra/container/docker-compose.yml` espera estão presentes (comparar com `examples/env.example` — mesmas chaves, não precisa saber os valores). Chave faltando = mesma regra acima, parar e devolver.
 
-## 2. Subir
+## 2. Perguntar: tudo ou só o essencial?
+
+**Sempre perguntar antes de subir** — não assumir "tudo" por padrão. Dois perfis:
+
+- **Essencial** (`postgres`, `redis`, `rabbitmq`, `keycloak`): cobre o que um projeto realmente depende pra rodar localmente. Indicado pra máquina com pouca RAM ou uso curto (notebook secundário, sessão de um dia).
+- **Completo** (todos os serviços do `docker-compose.yml`, incluindo `pgadmin`, `defectdojo-*`, `prometheus`/`grafana`/`loki`/`alloy`, `falco`, exporters): observabilidade e segurança completas, mais pesado.
+
+## 3. Subir
 
 Dentro de `infra/container/`:
 ```powershell
+# Completo
 docker compose up -d --build
+
+# Só essencial
+docker compose up -d --build postgres redis rabbitmq keycloak
 ```
 
-## 3. Confirmar saúde
+## 4. Confirmar saúde
 
-`docker compose ps` — todos os serviços `running`/`healthy`. Portas esperadas, uma por serviço:
+`docker compose ps` — todos os serviços que você pediu pra subir devem estar `running`/`healthy`. Portas esperadas, uma por serviço:
 
 - Postgres: `5432`
-- pgAdmin: `15432`
+- pgAdmin: `15432` (só no perfil completo)
 - Keycloak: `8080`
 - Redis: `6379`
 - RabbitMQ: `15672`
-- DefectDojo: `8443` (demora no primeiro boot)
-- Grafana: `3000`
-- Prometheus: `9090`
+- DefectDojo: `8443` (só no perfil completo — demora no primeiro boot)
+- Grafana: `3000` (só no perfil completo)
+- Prometheus: `9090` (só no perfil completo)
 
-Exceção conhecida: `falco` pode falhar (driver eBPF, Docker Desktop/WSL2) — se falhar, comentar o serviço no `infra/container/docker-compose.yml`, registrar no relatório final, subir de novo sem ele. Não travar o resto por causa do Falco.
+Exceção conhecida (perfil completo): `falco` pode falhar (driver eBPF, Docker Desktop/WSL2) — se falhar, comentar o serviço no `infra/container/docker-compose.yml`, registrar no relatório final, subir de novo sem ele. Não travar o resto por causa do Falco.
 
-`defectdojo-initializer` demora (roda migration) — não é falha, é esperado no primeiro boot.
+`defectdojo-initializer` demora (roda migration) — não é falha, é esperado no primeiro boot (só perfil completo).
 
-## 4. Devolver pro humano
+## 5. Devolver pro humano
 
-Relatório curto: o que subiu, o que precisou de intervenção (chave faltando no `.env`, Falco fora), portas de cada serviço pra ele conferir.
+Relatório curto: qual perfil subiu (essencial/completo), o que precisou de intervenção (chave faltando no `.env`, Falco fora), porta **e URL de acesso** de cada serviço pra ele conferir (ex.: Keycloak admin em `http://localhost:8080`, pgAdmin em `http://localhost:15432`, RabbitMQ management em `http://localhost:15672`).

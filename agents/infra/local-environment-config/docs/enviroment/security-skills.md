@@ -1,14 +1,14 @@
-# Skills de segurança — só sob pedido explícito, por projeto
+# Skills de segurança — instala tudo, sempre, por projeto
 
-Não roda como parte padrão da configuração de máquina — só quando pedido pra auditar um projeto específico (dentro da pasta daquele projeto):
+Não roda em Etapa 1 (é por projeto, dentro da pasta daquele projeto) — mas na Etapa 2 entra sempre como item do plano (Fluxo obrigatório do `CLAUDE.md`), não é mais preciso o humano lembrar de pedir separadamente. Como qualquer item do plano, só executa se aprovado — mas **sem menu de escolha nenhum**: é um item único (instalar tudo/skip), não uma seleção de quais repositórios/skills entram. Tudo fica com `disable-model-invocation: true` (nada dispara sozinho), então não existe "risco de colisão" real em instalar tudo — nomes duplicados (ex.: `/code-review` de mais de uma origem) só aparecem listados, nada é ativado sem o humano chamar explicitamente.
+
+**Alerta conhecido de antivírus corporativo — nunca abortar a instalação toda por causa disso:** alguns desses pacotes trazem arquivo de referência (confirmado: `security-review/references/supply-chain.md`, `raw.githubusercontent.com/getsentry/skills/main/...` — URL legítima, é o domínio oficial do GitHub pro repositório real da Sentry) que dispara falso positivo heurístico ("Trojan-Downloader") em antivírus corporativo — causa raiz confirmada: o arquivo documenta, como exemplo didático, os padrões de ataque que ele ensina a detectar (`curl ... | bash`, reverse shell, exfiltração via `requests.post`) — é o antivírus reagindo a esse texto, não execução real de nada. Se um arquivo específico for bloqueado/excluído: **seguir instalando o resto normalmente**, reportar qual arquivo/URL foi bloqueado e deixar a decisão de liberar no antivírus com o humano (ele decide se libera exceção ou convive sem aquele arquivo específico) — nunca tratar isso como erro que trava o item inteiro (exceção à regra geral de "erro para tudo" do Fluxo obrigatório, justamente porque a causa já é conhecida e não é deste agent decidir política de antivírus corporativo).
 
 ```powershell
-npx skills add getsentry/skills -s 'security-review,gha-security-review,skill-scanner' -a claude-code -y
-npx skills add briiirussell/cybersecurity-skills -s 'owasp-audit,api-audit,dependency-audit,secrets-audit,crypto-audit' -a claude-code -y
+npx skills add getsentry/skills -s '*' -a claude-code -y
+npx skills add briiirussell/cybersecurity-skills -s '*' -a claude-code -y
 ```
 
-Nunca "Select All" nesses dois repositórios — `getsentry/skills` tem skills (`code-review`, `commit`, `pr-writer`) que colidem com o `/code-review` já instalado (`skills.md`). Depois de instalar, abrir o `SKILL.md` de cada skill instalada e confirmar/adicionar `disable-model-invocation: true` no frontmatter — os repositórios de origem não garantem esse campo sozinhos.
-
-Situacional (só se o projeto tiver aquele escopo regulatório específico — decisão do humano, não do agent): `privacy-engineering`, `hipaa-audit`, `pci-audit`, `csf-mapping`, `ai-risk-management`, mesmo repositório `briiirussell/cybersecurity-skills`.
+`-s '*'` = tudo, incluindo as situacionais (`privacy-engineering`, `hipaa-audit`, `pci-audit`, `csf-mapping`, `ai-risk-management`) e as que têm nome parecido com skill já instalada (`code-review`, `commit`, `pr-writer` do `getsentry/skills` vs. o `/code-review` de `mattpocock/skills`) — instala as duas, fica tudo desabilitado, o humano usa qual quiser quando quiser. Depois de instalar, abrir o `SKILL.md` de cada skill instalada e confirmar/adicionar `disable-model-invocation: true` no frontmatter — os repositórios de origem não garantem esse campo sozinhos.
 
 Confirmar sempre via `/skills` dentro de uma sessão Claude Code depois de instalar.

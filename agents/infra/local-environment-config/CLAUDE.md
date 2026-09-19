@@ -30,7 +30,7 @@ Fora desses dois passos, nada neste arquivo lê, cita ou depende de `ai-base` �
    - **Depende de PATH/variável de ambiente recém-escrita no registro do Windows**: nunca tentar verificar nesta sessão — uma nova chamada de ferramenta (Bash/PowerShell) **não é um processo novo de verdade**, ela herda o ambiente do processo pai desta sessão e nunca vai enxergar a mudança (testado e confirmado: `[Environment]::SetEnvironmentVariable(...,"User")` seguido de uma chamada nova não reflete o valor). Só um terminal aberto de fora da árvore de processos desta sessão resolve. Pra esses casos: reportar exatamente o que foi escrito e onde (arquivo em `X`, PATH atualizado em `Y`), e pedir explicitamente pro humano confirmar **num terminal novo de verdade** (não "rode de novo aqui") — isso não é "empurrar verificação", é a única forma tecnicamente possível de confirmar, e tem que ficar dito assim no relatório, nunca reportado como "concluído" sem essa ressalva.
 7. Item "depende do humano": parar aquele item específico, dizer exatamente o que falta (chave, decisão, clique de instalador), seguir pros itens que não dependem disso.
 8. Erro (inclui falha de verificação do item 6): parar imediatamente. Reportar o comando exato, a saída completa, o que já rodou antes, e o diagnóstico do que foi encontrado (ex.: arquivo existe mas pasta não está no PATH). Nunca tenta alternativa sozinho, nunca ignora e segue.
-9. Ao final: relatório do que foi feito, onde acessar cada coisa, onde cada credencial nova ficou guardada (nunca o valor), e o comando de teste de cada item.
+9. Ao final: relatório do que foi feito, onde acessar cada coisa, onde cada credencial nova ficou guardada (nunca o valor), e o comando de teste de cada item. **Na Etapa 2, esse relatório também vira um arquivo `.md` persistido no projeto** (não só texto no chat — ver formato exato em "Relatório em arquivo" logo abaixo dos "Passos"). Ao terminar, avisar explicitamente que o arquivo foi criado/atualizado e o caminho completo dele.
 
 ## Regra de classificação
 
@@ -80,7 +80,10 @@ Roda uma vez por máquina, sem nenhum projeto envolvido.
 10. `docs/tools/rtk.md` — RTK, opcional. Perguntar ao humano se quer instalar antes de rodar.
 11. Claude Desktop e Figma (MCP): config de máquina, manual, fora do escopo deste agent — só informar ao humano que existe, nunca configurar.
 12. Infra compartilhada — seguir `docs/infra/container-bootstrap.md` do início ao fim (procedimento já escrito pra agent: verificar `.env`, subir, confirmar saúde, devolver relatório).
-13. VS Code — instalar extensões e criar os 4 profiles conforme `infra/configs/vscode/profiles.md` (extensões via `code --install-extension <id>`, criação do profile e colagem do `settings.json` → depende do humano, sem CLI pra isso).
+13. VS Code — extensões e os 4 profiles conforme `infra/configs/vscode/profiles.md`. **Ordem obrigatória, nunca inverter:**
+    1. **Depende do humano primeiro:** criar os 3 profiles nomeados (`angular-frontend`, `dotnet-backend`, `devops` — `Default` já existe) e colar o `settings.json` de cada um (GUI, sem CLI pra isso) — parar e pedir, listar exatamente os nomes.
+    2. **Só depois de o humano confirmar que os 3 profiles existem**, instalar as extensões **em cada profile** com `code --install-extension <id> --profile <nome-do-profile>` (repetir pra `Default`, `angular-frontend`, `dotnet-backend`, `devops`) — `code --install-extension` **sem** `--profile` só instala no profile `Default`, nunca nos outros três (é exatamente esse o bug se pular a ordem acima: extensão nenhuma nos profiles nomeados).
+    3. Verificar de verdade (regra do item 6 do Fluxo obrigatório): `code --list-extensions --profile <nome>` pra cada um dos 4, confirmar que a lista bate.
 14. `docs/enviroment/google-drive.md` — Google Drive for Desktop.
 15. Kubernetes local — seguir `docs/infra/kubernetes-local.md` do início ao fim (procedimento já escrito pra agent: verificar, instalar, confirmar consumo de recurso com o humano, registrar GitLab Agent com token do humano, devolver relatório).
 16. Relatório final: versão de cada ferramenta, serviço/porta/URL de cada container, onde cada credencial nova ficou, comando de teste por item.
@@ -89,13 +92,13 @@ Roda uma vez por máquina, sem nenhum projeto envolvido.
 
 ## ETAPA 2 — Configuração de projeto (existente ou novo)
 
-**Detectar novo vs. existente**: nunca inferir sozinho. Perguntar direto ao humano: "este projeto ainda não existe (precisa ser criado do zero) ou já é um projeto em andamento?" — **novo** roda "Nascimento do projeto" abaixo antes de qualquer outra coisa, depois o scaffold de stack, depois os "Passos (novo e existente)"; **existente** roda "Comparar com o template" abaixo antes de qualquer outra coisa, depois os "Passos", detectando stack pelo código já existente (passo 1).
+**Detectar novo vs. existente**: nunca inferir sozinho. Perguntar direto ao humano: "este projeto ainda não existe (precisa ser criado do zero) ou já é um projeto em andamento?" — **novo** roda "Nascimento do projeto" abaixo antes de qualquer outra coisa, depois os "Passos (novo e existente)"; **existente** roda "Comparar com o template" abaixo antes de qualquer outra coisa, depois os "Passos".
 
 **Pré-requisito de invocação — só "existente":** o `claude` desta sessão **sempre** é aberto de dentro da pasta deste agent (`agents/infra/local-environment-config/`) — nunca de dentro da pasta do projeto, senão carrega o `CLAUDE.md` do projeto (herdado do `ai-base`), não este arquivo. Esta etapa só começa se o humano **informou explicitamente o caminho completo do projeto** na mensagem — sem isso, o agent não sabe qual pasta configurar: parar e pedir o caminho antes de continuar, nunca assumir/adivinhar qual projeto é. Todos os comandos desta etapa usam esse caminho completo (absoluto ou `cd` pra lá antes de cada comando) — o terminal permanece fisicamente na pasta do agent. ("Novo" não tem esse pré-requisito — o endereço local é uma das perguntas da própria "Nascimento do projeto".)
 
 Pré-requisito de máquina (as duas): Etapa 1 concluída (`docker compose ps` do `infra` saudável, `pi --version`, `claude --version` respondem) — se não, parar e informar que a Etapa 1 precisa rodar primeiro.
 
-**Fora de escopo desta etapa, sempre:** rodar `ng new`/`dotnet new`/equivalente dentro do projeto já criado, e qualquer decisão de arquitetura/domínio. Este agent cria o repositório + popula com o template-base ("Nascimento do projeto", só "novo") e instala/configura dependências e infra ao redor do projeto (CLI, SDK, banco, MCP, observabilidade, design system, Playwright) — nunca escreve o código de domínio em si. Isso é o `/grill-me` → spec → implementação (Claude Code arquiteto + subagents do `pi.dev`), nunca este fluxo.
+**Fora de escopo desta etapa, sempre:** rodar `ng new`/`dotnet new`/equivalente, escolher ou instalar stack/SDK/dependência de projeto (Angular, .NET, PrimeNG, Tailwind, etc. — isso é o `package.json`/`.csproj` do próprio projeto, responsabilidade dele, nunca deste agent), e qualquer decisão de arquitetura/domínio. Exceção: `impeccable` continua sendo instalado por este agent (ver "Passos" abaixo) — é ferramental de auditoria de design, não dependência do projeto. Este agent cria o repositório + popula com o template-base ("Nascimento do projeto", só "novo") e instala/configura só a infra e ferramental **ao redor** do projeto (banco, MCP, observabilidade compartilhada, Playwright, skills) — nunca o código nem as dependências do projeto em si. Isso é o `/grill-me` → spec → implementação (Claude Code arquiteto + subagents do `pi.dev`), nunca este fluxo.
 
 ### Nascimento do projeto (só se "novo")
 
@@ -161,22 +164,58 @@ Passos:
 
 Essa comparação roda **antes** do resto da Etapa 2 — o resultado dela vira parte do plano geral apresentado ao humano (Fluxo obrigatório, item 4), junto com os "Passos (novo e existente)" abaixo.
 
-### Se "novo": primeiro pergunte a stack — nunca assuma
-
-Angular é o frontend padrão (React só se a spec explicitamente pedir landing page isolada); backend não tem stack fixo. Antes de qualquer scaffold:
-1. Perguntar ao humano: este projeto tem frontend? (Se sim, Angular é o padrão — confirmar se é esse o caso ou se a spec pede React.) Qual é o stack de backend? (.NET, ou outro — sem resposta objetiva própria, sempre pergunta.)
-2. Pra cada stack escolhida, checar a versão estável mais recente disponível **no momento da execução** antes de instalar/scaffold — nunca usar um número fixo deste arquivo como alvo (ex.: `npm view @angular/cli version` pro Angular; página oficial de releases do .NET, ou `winget search Microsoft.DotNet.SDK`, pro .NET). Hoje o `valuto` roda em .NET 10 e Angular 20+, mas isso muda com o tempo — sempre a mais nova estável, não esse número.
-3. Instalar o SDK/CLI da stack escolhida se ainda não estiver na máquina (ex.: `winget install Microsoft.DotNet.SDK.<mais recente>` pro .NET).
-
 ### Passos (novo e existente)
 
-1. Detectar stack (projeto "existente"): `.csproj` → backend .NET; `angular.json`/`@angular/core` no `package.json` → frontend Angular. Projeto "novo": usar a resposta da pergunta acima em vez de detectar.
-2. Provisionar infra pro projeto (nome = nome do projeto informado na "Nascimento do projeto", ou nome da pasta se "existente"): banco Postgres, vhost RabbitMQ, realm Keycloak, ACL Redis. Regra geral: `docs/agents/infra-local.md` (dentro da pasta do projeto). Comandos exatos: `docs/enviroment/project-provisioning.md` (deste agent). Credencial gerada aqui: nunca hardcoded, avisar onde ficou guardada.
-3. `.mcp.json` do projeto: bloco GitLab sempre (`"disabled": true`), GitHub só se o projeto precisar. Procedimento e template: `docs/infra/mcp-setup.md` + `docs/infra/mcp-snippets.md` (deste agent). Confirmar que a variável de ambiente referenciada já existe (Etapa 1, item 5) antes de escrever `${VAR}`.
-4. `docs/enviroment/skills.md` (deste agent) — skills base do projeto (Matt Pocock, Angular, `avoid-ai-design`). Roda em todo projeto (novo ou existente), sempre dentro da pasta do projeto — nunca reaproveita instalação de outro clone. Confirmar via `/skills`.
-5. `/health`, `/metrics`, log JSON no backend .NET (ou equivalente da stack escolhida) e registro em `infra/container/prometheus.yml`: regra em `docs/agents/observabilidade-backup.md` (dentro da pasta do projeto). Verificar presença, não implementar — ausente = reportar como pendência de código pro humano/Claude Code.
-6. Se frontend Angular: instalar PrimeNG (`npm install primeng @primeng/themes`), Tailwind (`ng add tailwindcss`), `ui-ux-pro-max-cli` (`npm install -g ui-ux-pro-max-cli` + `uipro init --ai claude`), `impeccable` (`npx impeccable install`, exige Node 22.12+ → depende do humano se não tiver). Referência de biblioteca/tokens/ordem da cadeia: `docs/design/component-library.md`, `docs/design/tokens.md`, `docs/design/principios.md` (todos dentro da pasta do projeto). Rodar `/impeccable init`/`detect`/`audit` dentro de uma sessão Claude Code depois.
-7. Playwright via Docker: confirmar a tag mais recente em `https://mcr.microsoft.com/en-us/product/playwright/tags` antes de puxar (nunca fixar tag antiga), `docker pull mcr.microsoft.com/playwright:<tag-atual>`.
-8. Skills de segurança — só se pedido explicitamente pro projeto: `docs/agents/security-review.md` (fluxo, dentro da pasta do projeto) e `docs/enviroment/security-skills.md` (comandos, deste agent, seletivo — nunca "Select All"). Confirmar `disable-model-invocation: true` em cada `SKILL.md` instalado.
-9. `docs/enviroment/smoke-test.md` (deste agent) — testar tudo junto (`pi`/`/model`) dentro da pasta do projeto, como validação final antes do relatório.
-10. Relatório final: o que foi configurado nesse projeto (incluindo stack escolhida e versões usadas; se "novo", URL do repo criado e se o humano já confirmou o `push`; se "existente", o resultado da "Comparar com o template" — o que foi aprovado/aplicado e o que ficou pendente), onde acessar, onde cada credencial nova ficou, comando de teste por item.
+1. Provisionar infra pro projeto (nome = nome do projeto informado na "Nascimento do projeto", ou nome da pasta se "existente"): banco Postgres, vhost RabbitMQ, realm Keycloak, ACL Redis. Regra geral: `docs/agents/infra-local.md` (dentro da pasta do projeto). Comandos exatos: `docs/enviroment/project-provisioning.md` (deste agent). Credencial gerada aqui: nunca hardcoded, avisar onde ficou guardada. **Projeto "existente" que já tem connection string/config apontando pra outro Postgres/Redis/etc.** (não o `infra` compartilhado local): reportar como item "Modificar" (mesma confirmação nominal da "Comparar com o template") — corrigir pra apontar pro host/porta do `infra` local, nunca decidir sozinho, é edição de config do projeto.
+2. `.mcp.json` do projeto: bloco GitLab sempre (`"disabled": true`), GitHub só se o projeto precisar. Procedimento e template: `docs/infra/mcp-setup.md` + `docs/infra/mcp-snippets.md` (deste agent). Confirmar que a variável de ambiente referenciada já existe (Etapa 1, item 5) antes de escrever `${VAR}`.
+3. `docs/enviroment/skills.md` (deste agent) — skills base do projeto (Matt Pocock, Angular, `avoid-ai-design`). Roda em todo projeto (novo ou existente), sempre dentro da pasta do projeto — nunca reaproveita instalação de outro clone. Confirmar via `/skills`.
+4. Observabilidade: regra em `docs/agents/observabilidade-backup.md` (dentro da pasta do projeto). `/health`, `/metrics`, log JSON no código do projeto — verificar presença, nunca implementar (ausente = pendência de código pro humano/Claude Code, fora de escopo). **Registro em `infra/container/prometheus.yml`** é diferente — esse arquivo é do repositório `infra` (compartilhado), não código do projeto, e é a config do container `prometheus` que já está rodando (mesmo `docker compose`, já confirmado saudável na Etapa 1/container-bootstrap). O arquivo já vem com um template comentado pronto pra isso (`# cada API .NET nova entra aqui...`) — se `/metrics` já existe e o projeto ainda não está registrado lá, isso **é agent executa** (edição mecânica de config, mesmo padrão de criar banco/vhost/realm): descomentar/adicionar um `job_name: <projeto>` apontando `host.docker.internal:<porta>` (a porta que o `/metrics` do projeto expõe no host — o container do Prometheus enxerga o host por esse nome, não `localhost`). Se `/metrics` ainda não existe, não tem o que registrar: só reportar a pendência de código — **e deixar rastro dentro do projeto pra próxima rodada achar sozinha**, não só falar no chat: criar/atualizar `docs/adr/adr-observability-pendente.md` (seguir a numeração de ADR que o projeto já usa, se tiver) com status "Pendente" — `/health`/`/metrics` não implementados, registro no `prometheus.yml` aguardando. Se esse ADR já existir e o item já foi resolvido (endpoint agora existe), atualizar o status em vez de deixar desatualizado.
+5. `impeccable` — **obrigatório, roda em todo projeto, não só se Angular**. **Nunca `npx impeccable install` puro** — bug confirmado e reproduzido na versão atual do pacote: o download (`https://impeccable.style/api/download/bundle/universal`) tem 3 saltos de redirect até o zip real (`impeccable.style` → `github.com/.../releases/download/...` → `release-assets.githubusercontent.com/...`), e o código do `impeccable` só segue 1 salto — sempre falha com `invalid zip data`, não é falha transitória de rede, **retry sozinho nunca resolve**. Usar o escape-hatch oficial do próprio pacote (variável `IMPECCABLE_BUNDLE_PATH`, existe no código pra exatamente esse tipo de caso):
+   ```powershell
+   Invoke-WebRequest -Uri "https://impeccable.style/api/download/bundle/universal" -OutFile "$env:TEMP\impeccable-universal.zip"
+   $env:IMPECCABLE_BUNDLE_PATH = "$env:TEMP\impeccable-universal.zip"
+   npx impeccable install
+   Remove-Item Env:\IMPECCABLE_BUNDLE_PATH
+   Remove-Item "$env:TEMP\impeccable-universal.zip"
+   ```
+   `Invoke-WebRequest` segue múltiplos redirects por padrão (diferente do download interno do `impeccable`), por isso baixa o zip completo de verdade — testado e confirmado (15,6MB, instala `.claude`/`.pi`/`.opencode` corretamente). Exige Node 22.12+ (depende do humano se a máquina não tiver). **Verificar de verdade antes de declarar concluído** (regra do item 6): confirmar que os arquivos do skill realmente existem em disco, não só que o comando terminou com código 0. Referência: `docs/design/component-library.md`, `docs/design/tokens.md`, `docs/design/principios.md` (dentro da pasta do projeto) — `/impeccable init`/`detect`/`audit` em si rodam depois, numa sessão de desenvolvimento do projeto, não nesta.
+6. Playwright via Docker: confirmar a tag mais recente em `https://mcr.microsoft.com/en-us/product/playwright/tags` antes de puxar (nunca fixar tag antiga), `docker pull mcr.microsoft.com/playwright:<tag-atual>`.
+7. Skills de segurança — **sempre no plano, instala tudo, sem menu de escolha** (não é mais preciso o humano lembrar de pedir separadamente): `docs/agents/security-review.md` (fluxo, dentro da pasta do projeto) e `docs/enviroment/security-skills.md` (comandos, deste agent — `-s '*'` nos dois repositórios, tudo desabilitado por padrão). Como qualquer item do plano, só executa se aprovado (é um único "sim/não", não uma seleção de subconjunto). Confirmar `disable-model-invocation: true` em cada `SKILL.md` instalado.
+8. `docs/enviroment/smoke-test.md` (deste agent) — testar tudo junto dentro da pasta do projeto, como validação final antes do relatório.
+9. Relatório final: o que foi configurado nesse projeto; se "novo", URL do repo criado e se o humano já confirmou o `push`; se "existente", o resultado da "Comparar com o template" — o que foi aprovado/aplicado e o que ficou pendente; **onde acessar cada coisa criada** (URL do admin console, porta, usuário — nunca senha em texto) — não só "criei X", mas "acesse em Y pra ver/configurar"; onde cada credencial nova ficou; comando de teste por item.
+
+### Relatório em arquivo
+
+Todo relatório final da Etapa 2 (item 9 acima) também é escrito/atualizado em `docs/agents/relatorio-ambiente.md`, dentro da pasta do projeto — não fica só no chat. **Nunca o valor de nenhuma credencial** (mesma regra absoluta do topo deste arquivo) — só usuário, URL de acesso, e onde/como achar ou gerar a senha (arquivo, comando, ou "gerada nesta rodada, guardada em `X`"). Estrutura:
+
+```markdown
+# Relatório de ambiente — <nome do projeto>
+
+Última atualização: <data>, rodada Etapa 2 (<novo|existente>).
+
+## O que foi feito
+
+- <item> — <o que mudou, aprovado/executado>
+- ...
+
+## Acessos
+
+| Serviço | URL | Usuário | Onde achar a senha |
+|---|---|---|---|
+| Postgres | `localhost:5432` (pgAdmin: `http://localhost:15432`, se perfil completo) | `<usuário>` | `infra/container/.env`, campo `POSTGRES_PASSWORD` |
+| Keycloak | `http://localhost:8080` | `<usuário>` | `infra/container/.env`, campo `KEYCLOAK_ADMIN_PASSWORD` |
+| RabbitMQ | `http://localhost:15672` | `<usuário>` | `infra/container/.env` |
+| Redis | sem UI — testar via `redis-cli` | ACL user `<projeto>` | gerada nesta rodada — <onde ficou guardada, nunca o valor> |
+
+(Ajustar linhas conforme o que esse projeto realmente usa — não copiar as 4 se só provisionou uma.)
+
+## Pendências
+
+- <ex.: link pro ADR de observabilidade, se existir>
+
+## Comandos de teste
+
+- <um por item, o que já está no relatório de chat>
+```
+
+Idempotente como tudo mais: reescreve/atualiza esse arquivo a cada rodada, nunca duplica um relatório antigo do lado.
