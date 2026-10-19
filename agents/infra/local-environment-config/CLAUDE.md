@@ -72,7 +72,7 @@ Roda uma vez por máquina, sem nenhum projeto envolvido.
    Depois de o humano informar que instalou/atualizou, o agent só reverifica (`node -v`, `git --version`, `code --version`, `docker --version`) — nunca assume, nunca segue sem essa confirmação.
 3. Instalar Claude Code (instalador nativo, não npm — `irm https://claude.ai/install.ps1 | iex`), se ausente. Confirmar `claude --version`.
 4. `docs/enviroment/pi-dev.md` — instalar `pi.dev` + adapter de MCP (só o que faltou nos passos 1-2).
-5. `docs/enviroment/api-keys.md` — chaves de API (verificar presença, nunca o valor): `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, `GITLAB_TOKEN`, `GITHUB_TOKEN`.
+5. `docs/enviroment/api-keys.md` — chaves de API (verificar presença, nunca o valor): `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, `GITLAB_TOKEN`, `GITHUB_TOKEN`. (`OMNIROUTE_API_KEY`/`OMNIROUTE_EVAL_KEY` só existem depois do OmniRoute de pé — item 12.1.)
 6. `docs/enviroment/alethe.md` — Alethe.
 7. `docs/enviroment/glab.md` — `glab` (instalar + autenticar).
 8. **Clonar `infra`, se ausente.** Confirmar com `ls` se `../../../../infra` já existe. Se não: com `glab` já autenticado (passo 7), `glab repo clone personal.daniel.bmend/infra`, clonando na pasta irmã correta de `ai-ops` (nunca `git clone` com o token embutido na URL — vaza em `git remote -v`/histórico). Sem esse repo, os itens de infra compartilhada abaixo não funcionam. **Nunca clonar `ai-base` aqui** — ver regra sobre `ai-base` no topo deste arquivo; virar o conteúdo de um projeto novo é sempre outro fluxo, fora deste agent.
@@ -80,6 +80,7 @@ Roda uma vez por máquina, sem nenhum projeto envolvido.
 10. `docs/tools/rtk.md` — RTK, opcional. Perguntar ao humano se quer instalar antes de rodar.
 11. Claude Desktop e Figma (MCP): config de máquina, manual, fora do escopo deste agent — só informar ao humano que existe, nunca configurar.
 12. Infra compartilhada — seguir `docs/infra/container-bootstrap.md` do início ao fim (procedimento já escrito pra agent: verificar `.env`, subir, confirmar saúde, devolver relatório).
+    1. OmniRoute (gateway de LLM do `pi`, sobe junto no perfil essencial) — seguir `docs/infra/omniroute.md` do início ao fim: migração da instância antiga (export pra código), saúde, `apply` da configuração versionada (`infra/configs/omniroute/config/` + segredos no `infra/container/.env` — nunca pelo dashboard), provider `omniroute` em `~/.pi/agent/models.json`, prova com `pi-light`.
 13. VS Code — extensões e os 4 profiles conforme `infra/configs/vscode/profiles.md`. **Ordem obrigatória, nunca inverter:**
     1. **Depende do humano primeiro:** criar os 3 profiles nomeados (`angular-frontend`, `dotnet-backend`, `devops` — `Default` já existe) e colar o `settings.json` de cada um (GUI, sem CLI pra isso) — parar e pedir, listar exatamente os nomes.
     2. **Só depois de o humano confirmar que os 3 profiles existem**, instalar as extensões **em cada profile** com `code --install-extension <id> --profile <nome-do-profile>` (repetir pra `Default`, `angular-frontend`, `dotnet-backend`, `devops`) — `code --install-extension` **sem** `--profile` só instala no profile `Default`, nunca nos outros três (é exatamente esse o bug se pular a ordem acima: extensão nenhuma nos profiles nomeados).

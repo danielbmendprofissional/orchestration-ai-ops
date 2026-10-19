@@ -25,3 +25,11 @@ Cada pasta de agent tem seu próprio `README.md` — este arquivo aqui é só o 
 | `local-environment-config` | infra | Claude Code | `agents/infra/local-environment-config/` |
 
 Ver o `README.md` de cada pasta pra detalhe de uso.
+
+## Ferramentas (`tools/`)
+
+Scripts de apoio que não são agents — rodados pelo humano.
+
+| Ferramenta | O que faz | Onde |
+|---|---|---|
+| `omniroute-eval` | Ranking empírico dos modelos do OmniRoute pro papel de executor do `pi` (tool calling, edição, escrita de teste) | `tools/omniroute-eval/` |

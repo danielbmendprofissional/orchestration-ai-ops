@@ -10,3 +10,5 @@ Thumbs.db
 Claude outputs/*
 Claude outputs/
 Claude outputs
+# saída do ai-ops/tools/omniroute-eval
+tools/omniroute-eval/results/

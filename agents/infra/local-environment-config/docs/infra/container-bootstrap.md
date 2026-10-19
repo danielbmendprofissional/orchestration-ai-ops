@@ -24,7 +24,7 @@ Se `.env` já existe: confirmar que todas as chaves que `infra/container/docker-
 
 **Sempre perguntar antes de subir** — não assumir "tudo" por padrão. Dois perfis:
 
-- **Essencial** (`postgres`, `redis`, `rabbitmq`, `keycloak`): cobre o que um projeto realmente depende pra rodar localmente. Indicado pra máquina com pouca RAM ou uso curto (notebook secundário, sessão de um dia).
+- **Essencial** (`postgres`, `redis`, `rabbitmq`, `keycloak`, `omniroute`): cobre o que um projeto realmente depende pra rodar localmente — `omniroute` entra aqui porque sem ele o `pi` fica sem modelo (ver `docs/infra/omniroute.md`). Indicado pra máquina com pouca RAM ou uso curto (notebook secundário, sessão de um dia).
 - **Completo** (todos os serviços do `docker-compose.yml`, incluindo `pgadmin`, `defectdojo-*`, `prometheus`/`grafana`/`loki`/`alloy`, `falco`, exporters): observabilidade e segurança completas, mais pesado.
 
 ## 3. Subir
@@ -35,7 +35,7 @@ Dentro de `infra/container/`:
 docker compose up -d --build
 
 # Só essencial
-docker compose up -d --build postgres redis rabbitmq keycloak
+docker compose up -d --build postgres redis rabbitmq keycloak omniroute
 ```
 
 ## 4. Confirmar saúde
@@ -46,6 +46,7 @@ docker compose up -d --build postgres redis rabbitmq keycloak
 - pgAdmin: `15432` (só no perfil completo)
 - Keycloak: `8080`
 - Redis: `6379`
+- OmniRoute: `20128` (dashboard + `/v1`, só em `127.0.0.1`) — configuração depois de subir: `docs/infra/omniroute.md`
 - RabbitMQ: `15672`
 - DefectDojo: `8443` (só no perfil completo — demora no primeiro boot)
 - Grafana: `3000` (só no perfil completo)

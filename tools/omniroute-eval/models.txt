@@ -1,0 +1,26 @@
+# Um modelo por linha (formato provider/modelo do OmniRoute). Linha com # é ignorada.
+# Só free por padrão — pago (deepseek/, openai/) custa dinheiro real, descomente consciente.
+
+# --- candidatos a pool-exec-free ---
+nvidia/moonshotai/kimi-k3
+nvidia/nvidia/nemotron-3-ultra-550b-a55b
+openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+ollama-cloud/deepseek-v4.1-flash
+nvidia/deepseek-ai/deepseek-v4.1-flash
+bazaarlink/deepseek/deepseek-v4-flash-0731free:free
+ollama-cloud/glm-5.3-flash
+groq/openai/gpt-oss-120b
+gemini/gemini-3.8-flash
+sambanova/DeepSeek-V3.2
+
+# --- candidatos a pi-light ---
+groq/openai/gpt-oss-20b
+mistral/ministral-14b-latest
+cloudflare-ai/@cf/zai-org/glm-4.7-flash
+cloudflare-ai/@cf/google/gemma-4-26b-a4b-it
+gemini/gemini-3.5-flash-lite
+mistral/mistral-small-2603
+
+# --- pagos (referência de qualidade, custo real) ---
+# deepseek/deepseek-v4-flash
+# openai/gpt-5.6-luna
