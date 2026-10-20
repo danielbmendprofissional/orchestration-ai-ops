@@ -1,6 +1,6 @@
 # omniroute-eval
 
-Ranking empírico dos modelos do OmniRoute pro papel de executor do `pi.dev`. Substitui a ordem estimada dos combos em `infra/configs/omniroute/combos.md` por dado real.
+Ranking empírico dos modelos do OmniRoute pro papel de executor do `pi.dev`. Substitui a ordem estimada dos combos em `ai-infra/configs/omniroute/combos.md` por dado real.
 
 ## O que mede
 
@@ -22,7 +22,7 @@ O código gerado pelo modelo roda com `node --permission` (sem escrita em disco,
 
 ## Como rodar
 
-Pré-requisitos: Node 22+, OmniRoute de pé (`docker compose ps` no `infra/container`), API key de cliente `eval` — criada pelo `apply` do `infra/configs/omniroute` (com `--setx`, já grava `OMNIROUTE_EVAL_KEY` no Windows).
+Pré-requisitos: Node 22+, OmniRoute de pé (`docker compose ps` no `ai-infra/container`), API key de cliente `eval` — criada pelo `apply` do `ai-infra/configs/omniroute` (com `--setx`, já grava `OMNIROUTE_EVAL_KEY` no Windows).
 
 ```powershell
 # OMNIROUTE_EVAL_KEY já vem do apply --setx (terminal novo)
@@ -43,5 +43,5 @@ Resultado: tabela no terminal + `results/<timestamp>.md` e `.json` (fora do git)
 
 1. Modelo com qualidade baixa (< 50%): sai do `pool-exec-free`; se for rápido, candidato a `pi-light`.
 2. Ordenar o `pool-exec-free` por qualidade, desempate por disponibilidade.
-3. Atualizar a seção "Ranking" de `infra/configs/omniroute/combos.md` com a tabela e aplicar a ordem no dashboard.
+3. Atualizar a seção "Ranking" de `ai-infra/configs/omniroute/combos.md` com a tabela e aplicar a ordem no dashboard.
 4. Rodar de novo quando entrar modelo novo ou a cada ~2 semanas — free tier muda sem aviso.

@@ -1,6 +1,6 @@
 # Kubernetes local (k3d) — procedimento do agente
 
-Valida cluster + operators + GitLab Agent conectado, na máquina local, zero custo de nuvem. Não é a arquitetura de produção (AWS/EC2/Let's Encrypt — fora do escopo de qualquer agent, decisão/execução do humano) e não deploya aplicação nenhuma dentro dos clusters — falta um job `deploy-kubernetes` no `template-ci` que ainda não existe.
+Valida cluster + operators + GitLab Agent conectado, na máquina local, zero custo de nuvem. Não é a arquitetura de produção (AWS/EC2/Let's Encrypt — fora do escopo de qualquer agent, decisão/execução do humano). Não deploya aplicação — isso é a esteira do `template-ci` (`deploy/kubernetes.yml`).
 
 Pré-requisito: Docker Desktop rodando. **Checar via processo, nunca via `docker info` direto** (`docker info` pode levar minutos tentando conectar se o app estiver fechado — ver `docs/infra/container-bootstrap.md`, item 0):
 
@@ -124,7 +124,7 @@ Depois de cada operator instalado: criar 1 CR mínimo (`Cluster`/`Redis`/`Rabbit
 
 Token de registro só sai clicando na UI do GitLab (projeto → Operate → Kubernetes clusters → Connect a cluster). Não usar Personal Access Token pra isso via API mesmo sendo tecnicamente possível — escopo largo demais pra um agent segurar. **Parar aqui**, pedir pro humano gerar 1 token por cluster (2, um por ambiente) e colar de volta.
 
-No repo do próprio projeto (não em `infra`):
+No repo do próprio projeto (não em `ai-infra`):
 ```yaml
 # .gitlab/agents/<projeto>-qa-local/config.yaml
 ci_access:

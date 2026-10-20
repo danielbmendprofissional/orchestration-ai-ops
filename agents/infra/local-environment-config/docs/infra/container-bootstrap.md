@@ -1,6 +1,6 @@
 # Subir a infra compartilhada local — procedimento do agente
 
-Todos os caminhos abaixo são dentro do repositório `infra` (não deste agent). `infra/container/.env` guarda segredo real (mesmo que só de dev) — nunca ler o conteúdo dele em voz alta (log, relatório, chat) e nunca preencher valor sozinho.
+Todos os caminhos abaixo são dentro do repositório `ai-infra` (não deste agent). `ai-infra/container/.env` guarda segredo real (mesmo que só de dev) — nunca ler o conteúdo dele em voz alta (log, relatório, chat) e nunca preencher valor sozinho.
 
 ## 0. Docker Desktop está rodando?
 
@@ -16,20 +16,20 @@ Retornou o processo: só então rodar `docker info` pra confirmar que o daemon j
 
 ## 1. Verificar
 
-`infra/container/.env` existe? Se não existir: **parar aqui**, copiar `infra/container/examples/env.example` pra `infra/container/.env` só como esqueleto (valores placeholder), e devolver pro humano pedindo pra preencher os valores reais direto no arquivo (cada chave já vem comentada no próprio `env.example`) — nunca inventar senha/segredo.
+`ai-infra/container/.env` existe? Se não existir: **parar aqui**, copiar `ai-infra/container/examples/env.example` pra `ai-infra/container/.env` só como esqueleto (valores placeholder), e devolver pro humano pedindo pra preencher os valores reais direto no arquivo (cada chave já vem comentada no próprio `env.example`) — nunca inventar senha/segredo.
 
-Se `.env` já existe: confirmar que todas as chaves que `infra/container/docker-compose.yml` espera estão presentes (comparar com `examples/env.example` — mesmas chaves, não precisa saber os valores). Chave faltando = mesma regra acima, parar e devolver.
+Se `.env` já existe: confirmar que todas as chaves que `ai-infra/container/docker-compose.yml` espera estão presentes (comparar com `examples/env.example` — mesmas chaves, não precisa saber os valores). Chave faltando = mesma regra acima, parar e devolver.
 
 ## 2. Perguntar: tudo ou só o essencial?
 
 **Sempre perguntar antes de subir** — não assumir "tudo" por padrão. Dois perfis:
 
 - **Essencial** (`postgres`, `redis`, `rabbitmq`, `keycloak`, `omniroute`): cobre o que um projeto realmente depende pra rodar localmente — `omniroute` entra aqui porque sem ele o `pi` fica sem modelo (ver `docs/infra/omniroute.md`). Indicado pra máquina com pouca RAM ou uso curto (notebook secundário, sessão de um dia).
-- **Completo** (todos os serviços do `docker-compose.yml`, incluindo `pgadmin`, `defectdojo-*`, `prometheus`/`grafana`/`loki`/`alloy`, `falco`, exporters): observabilidade e segurança completas, mais pesado.
+- **Completo** (todos os serviços do `docker-compose.yml`, incluindo `pgadmin`, `prometheus`/`grafana`/`loki`/`alloy`, `falco`, exporters): observabilidade e segurança completas, mais pesado.
 
 ## 3. Subir
 
-Dentro de `infra/container/`:
+Dentro de `ai-infra/container/`:
 ```powershell
 # Completo
 docker compose up -d --build
@@ -48,13 +48,11 @@ docker compose up -d --build postgres redis rabbitmq keycloak omniroute
 - Redis: `6379`
 - OmniRoute: `20128` (dashboard + `/v1`, só em `127.0.0.1`) — configuração depois de subir: `docs/infra/omniroute.md`
 - RabbitMQ: `15672`
-- DefectDojo: `8443` (só no perfil completo — demora no primeiro boot)
 - Grafana: `3000` (só no perfil completo)
 - Prometheus: `9090` (só no perfil completo)
 
-Exceção conhecida (perfil completo): `falco` pode falhar (driver eBPF, Docker Desktop/WSL2) — se falhar, comentar o serviço no `infra/container/docker-compose.yml`, registrar no relatório final, subir de novo sem ele. Não travar o resto por causa do Falco.
+Exceção conhecida (perfil completo): `falco` pode falhar (driver eBPF, Docker Desktop/WSL2) — se falhar, comentar o serviço no `ai-infra/container/docker-compose.yml`, registrar no relatório final, subir de novo sem ele. Não travar o resto por causa do Falco.
 
-`defectdojo-initializer` demora (roda migration) — não é falha, é esperado no primeiro boot (só perfil completo).
 
 ## 5. Devolver pro humano
 

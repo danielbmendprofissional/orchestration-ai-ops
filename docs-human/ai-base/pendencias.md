@@ -12,10 +12,10 @@
 ## Decisões suas, pendentes
 
 - `pgdsat` (CIS PostgreSQL Benchmark scanner): rodar manual ou como job agendado?
-## OmniRoute (decidido em 2026-10-18 — ver `infra/configs/omniroute/combos.md`)
+## OmniRoute (decidido em 2026-10-18 — ver `ai-infra/configs/omniroute/combos.md`)
 
-- **Migração pra config-as-code (`infra/configs/omniroute/`):** (1) você roda `export --harvest-secrets --ask-password` contra a instância npm atual → commit do snapshot; (2) aplicar as decisões do `combos.md` em `config/*.json` → commit; (3) parar a instância npm, `docker compose up -d omniroute`, `apply --setx`, `diff` limpo; (4) só então: apagar `omniroute-export-*`, `npm uninstall -g omniroute`, apagar `~/.omniroute`. Recarga automática DeepSeek/OpenAI desligada.
-- **Backup do `infra/container/.env`** (única peça do OmniRoute que não se reconstrói — chaves de provider).
+- **Migração pra config-as-code (`ai-infra/configs/omniroute/`):** (1) você roda `export --harvest-secrets --ask-password` contra a instância npm atual → commit do snapshot; (2) aplicar as decisões do `combos.md` em `config/*.json` → commit; (3) parar a instância npm, `docker compose up -d omniroute`, `apply --setx`, `diff` limpo; (4) só então: apagar `omniroute-export-*`, `npm uninstall -g omniroute`, apagar `~/.omniroute`. Recarga automática DeepSeek/OpenAI desligada.
+- **Backup do `ai-infra/container/.env`** (única peça do OmniRoute que não se reconstrói — chaves de provider).
 - **Rodar o eval** (`ai-ops/tools/omniroute-eval`) e reordenar os combos com o ranking real.
 - **Combo `harness` (DeepSeek Harness, código do trabalho):** revisar — código profissional não deve passar por provider free que treina com prompt. Não usar até decidir.
 - **IA no CI (anotado, não fazer agora):** review barato no pipeline via OmniRoute free. Exige runner self-hosted na máquina (runner do gitlab.com não enxerga `localhost`) ou OmniRoute exposto com auth.

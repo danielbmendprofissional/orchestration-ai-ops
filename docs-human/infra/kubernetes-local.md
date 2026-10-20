@@ -4,7 +4,7 @@ Este arquivo é sobre rodar o desenho decidido **na sua máquina**, sem AWS. Qua
 
 ## O que este arquivo NÃO cobre (leia antes de começar)
 
-`template-ci` hoje não tem job de deploy em Kubernetes — `deploy-dotnet` usa `msdeploy.exe`, `deploy-angular-apache` usa `rsync`. Então, com o que existe hoje, dá pra validar cluster + operators + GitLab Agent conectado — mas o pipeline real (`ci-execucao.yml`) ainda não vai publicar sua aplicação dentro desse cluster. Isso exige um job novo (`deploy-kubernetes`, tipo `kubectl apply`/Helm) que ainda não existe — fica pra quando você mexer no `template-ci` por conta própria.
+Este arquivo cobre o cluster (k3d, operators, GitLab Agent). O deploy da aplicação é do `template-ci` (`deploy/kubernetes.yml`: migrations + kustomize + rollout via agent) — configuração por projeto no `template-ci/README.md`.
 
 Pré-requisito: Docker Desktop rodando.
 
@@ -88,7 +88,7 @@ Depois de cada operator instalado, criar 1 `Cluster`/`Redis`/`RabbitmqCluster`/`
 
 No GitLab: projeto → Operate → Kubernetes clusters → Connect a cluster → escolhe/cria o nome do agent (ex: `valuto-qa-local`). Isso cria um token de registro.
 
-No repo do projeto (ex: `valuto`, não `ai-base`/`infra`):
+No repo do projeto (ex: `valuto`, não `ai-base`/`ai-infra`):
 ```yaml
 # .gitlab/agents/valuto-qa-local/config.yaml
 ci_access:
@@ -112,7 +112,7 @@ Confirma que funcionou: `kubectl get nodes` deve aparecer na aba Kubernetes do p
 
 **Dá pra validar agora:** os 2 clusters existem e são isolados, os 4 operators sobem de verdade (não é YAML teórico), o GitLab Agent conecta e o GitLab enxerga o cluster.
 
-**Não dá ainda:** a esteira publicando sua aplicação dentro desses clusters — falta o job `deploy-kubernetes` no `template-ci`, que não existe hoje. Sem isso, `qa`/`hml` continuam "vazios" do ponto de vista da esteira, mesmo com cluster e operators de pé.
+**Depois daqui:** a esteira publica a aplicação nesses clusters quando o projeto define `KUBE_CONTEXT`/`K8S_NAMESPACE`/`APP_URL` por ambiente e o `ci_access` do agent libera o projeto (ver `template-ci/README.md`, Setup único).
 
 ## 7. Quando for pra AWS de verdade
 

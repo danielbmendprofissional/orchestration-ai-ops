@@ -8,15 +8,15 @@ Sequência única, da máquina limpa até publicado de verdade. Cada passo apont
 
 ## 2. Subir a infra compartilhada local
 
-Uma vez só por máquina, fica rodando pra todo projeto. Repo `infra`, dentro de `container/`:
+Uma vez só por máquina, fica rodando pra todo projeto. Repo `ai-infra`, dentro de `container/`:
 
 ```powershell
 docker compose up -d --build
 ```
 
-`--build` é obrigatório — o Postgres não é mais imagem pronta, builda local com pgAudit (`files/postgres/Dockerfile`). Primeira subida demora mais por causa disso; o `defectdojo-initializer` também demora (roda migration + cria usuário admin).
+`--build` é obrigatório — o Postgres não é mais imagem pronta, builda local com pgAudit (`files/postgres/Dockerfile`). Primeira subida demora mais por causa disso.
 
-Confere que subiu: Postgres (`5432`), pgAdmin (`15432`), Keycloak (`8080`), Redis (`6379`), RabbitMQ (`15672`), DefectDojo (`8443`), Grafana (`3000`), Prometheus (`9090`). Se o serviço `falco` não subir (risco conhecido em Docker Desktop/WSL2), comenta ele no `docker-compose.yml` e segue — não bloqueia o resto.
+Confere que subiu: Postgres (`5432`), pgAdmin (`15432`), Keycloak (`8080`), Redis (`6379`), RabbitMQ (`15672`), Grafana (`3000`), Prometheus (`9090`). Se o serviço `falco` não subir (risco conhecido em Docker Desktop/WSL2), comenta ele no `docker-compose.yml` e segue — não bloqueia o resto.
 
 ## 3. Criar o repo do projeto a partir do `ai-base`
 
@@ -25,7 +25,7 @@ Copiar a estrutura do template pro repo novo (`docs/`, `docs-human/`, `.pi/agent
 ## 4. Apontar pra infra compartilhada (nascimento de projeto)
 
 Rodar os comandos do passo 11 de `comandos-para-rodar.md`:
-- Postgres: criar banco `<projeto>` + `infra/banco/<projeto>/init-db.sql` (organização interna — schema por módulo ou não — é decisão do projeto).
+- Postgres: criar banco `<projeto>` + `ai-infra/banco/<projeto>/init-db.sql` (organização interna — schema por módulo ou não — é decisão do projeto).
 - RabbitMQ: criar vhost `<projeto>`.
 - Keycloak: criar realm `<projeto>`.
 - Redis: criar ACL user `<projeto>` restrito a `<projeto>:*`.
@@ -41,13 +41,13 @@ Regra do `ai-base` (`docs/agents/infra-local.md`, `docs/agents/observabilidade-b
 
 ## 6. Registrar o projeto no Prometheus
 
-Adicionar 1 linha nova em `infra/container/prometheus.yml`, apontando pro `/metrics` da API do projeto.
+Adicionar 1 linha nova em `ai-infra/container/prometheus.yml`, apontando pro `/metrics` da API do projeto.
 
 ## 7. Ligar a esteira de CI/CD
 
-No `.gitlab-ci.yml` do projeto (herdado do template): confirmar que o include do `/review/code-review-verify.yml` está lá, os jobs `verify-code-review`/`abrir-mr-dev`, e a regra `feature/*` no `workflow.rules` — ver `docs/agents/orchestration.md` e `docs/agents/esteira-deploy.md` pro fluxo completo (tag `vX.Y.Z-rcN`, promoção dev→qa→hml→master).
+Em cada repositório de código do workspace (`<projeto>-api`, `<projeto>-frontend` — ver `docs/agents/workspace.md`), `.gitlab-ci.yml` copiado de `templates/` do `ai-base`: `include` do `template-ci` (`ref: v2.0.0`), `APP_TECHNOLOGY` + variáveis da tecnologia, `REVIEW_GATE_ENABLED: "true"` (gate de `feature/*` → MR pra `dev`, precisa de `GITLAB_TOKEN` no projeto). Setup único (runner privileged, GitLab Agent, pull secret, Secret do banco, variáveis por ambiente) no `template-ci/README.md` — ver `docs/agents/orchestration.md` e `docs/agents/esteira-deploy.md` pro fluxo completo (tag `vX.Y.Z-rcN`, promoção dev→qa→hml→main).
 
-**Gap conhecido (você corrige direto no `template-ci`, não é regra pronta ainda):** hoje o `include` do `code-review-verify.yml` não existe em lugar nenhum do pipeline, e o `template-ci` não tem job de deploy em Kubernetes (`deploy-dotnet`/`deploy-angular-apache` usam `msdeploy`/`rsync`, não `kubectl`). Isso trava só a esteira automatizada — não trava o passo 9 (desenvolvimento local).
+**Ainda não validado no GitLab real:** o `template-ci` v2 (deploy em Kubernetes, gate de review, scanners) foi testado localmente em Docker, mas o encadeamento completo de pipelines ainda não rodou no gitlab.com — primeiro projeto real é o teste ponta a ponta.
 
 Autenticar `glab` no runner se ainda não tiver feito (passo 5 de `comandos-para-rodar.md`).
 
@@ -65,7 +65,7 @@ Nada abaixo precisa de Kubernetes nem AWS — roda tudo local, em cima do que os
 - Specs viram issues no GitLab (`docs/agents/issue-tracker.md`).
 - `pi` executa via `/implement-task`, um painel do Alethe por spec (`docs/agents/orchestration.md`).
 - `/code-review` manual (sua sessão Claude Code, seu Pro) antes de cada push de `feature/*`.
-- Esteira dev→qa→hml→master só entra em jogo quando o gap do passo 7 estiver resolvido e você decidir publicar de verdade.
+- Esteira dev→qa→hml→main entra em jogo quando você decidir publicar de verdade (setup único no `template-ci/README.md`).
 
 Auditoria manual de segurança quando quiser (não é automática): skills do passo 13 de `comandos-para-rodar.md`, fluxo completo em `docs/agents/security-review.md`.
 
@@ -75,7 +75,7 @@ Isso valida o desenho de Kubernetes (os 4 operators, GitLab Agent conectado) sem
 
 Resumo da ordem lá dentro: instalar `k3d` → subir 2 clusters (`qa`/`hml` locais) → cert-manager com `ClusterIssuer` self-signed (sem Let's Encrypt, sem domínio público) → os 4 operators (CloudNativePG, Redis Operator, RabbitMQ Cluster Operator, Keycloak Operator) em cada cluster → registrar o GitLab Kubernetes Agent em cada um.
 
-**Importante:** isso só valida cluster + operators + Agent conectado. Não valida a esteira publicando sua aplicação de verdade — falta o job `deploy-kubernetes` no `template-ci` (gap do passo 7), que ainda não existe.
+**Importante:** isso só valida cluster + operators + Agent conectado. Pra publicar a aplicação nesses clusters pela esteira: `KUBE_CONTEXT`/`K8S_NAMESPACE`/`APP_URL` por ambiente no projeto (ver `template-ci/README.md`).
 
 ## 11. Publicar pela primeira vez — nuvem de verdade (AWS)
 
@@ -87,6 +87,6 @@ Aqui entra o Kubernetes de produção. Kit de bootstrap completo (comandos exato
 
 Repete A→B→C→D pra cada cluster — 1 por projeto × ambiente (`qa`, `hml`, `master`), conforme Opção 3 decidida. Dados não vêm do cluster local automaticamente — se quiser levar algo, é `pg_dump`/restore manual.
 
-## 12. Segurança (quando o `DefectDojo` já estiver rodando no `infra`)
+## 12. Segurança
 
-Rodar o `Security-Scanner` contra o projeto, importar achados no DefectDojo via API (ver `docs-human/pendencias.md`, checklist do DefectDojo). Camadas completas de segurança (mecânica automática + skills manuais + scanner de infra + Kubernetes futuro) em `docs/agents/security-review.md` e `docs/agents/kubernetes-security.md`.
+Os scanners por assinatura (Trivy/Opengrep/Checkov/BetterLeaks/ZAP) rodam no stage `security` da esteira (`template-ci`), com gate por severidade. Pra rodar fora da esteira, o CLI do `Security-Scanner` gera o relatório consolidado (JSON/PDF) local. Camadas completas de segurança (mecânica automática + skills manuais + scanner de infra + Kubernetes futuro) em `docs/agents/security-review.md` e `docs/agents/kubernetes-security.md`.

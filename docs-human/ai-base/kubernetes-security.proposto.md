@@ -1,6 +1,6 @@
 # Segurança de Kubernetes — não se aplica ainda
 
-Este arquivo é sobre o estágio que **ainda não existe**: o `ai-base`/`infra` hoje roda em Docker Compose local (ver `docs/agents/infra-local.md`), o Kubernetes é kit de bootstrap decidido mas não implementado (`docs-human/pendencias.md`, seção Kubernetes: A) EC2+k3s, B) cert-manager, C) GitLab Kubernetes Agent, D) os 4 operators). Nada aqui deve ser executado antes do passo D daquele kit estar de pé — isso é o passo seguinte, não paralelo.
+Este arquivo é sobre o estágio que **ainda não existe**: o `ai-base`/`ai-infra` hoje roda em Docker Compose local (ver `docs/agents/infra-local.md`), o Kubernetes é kit de bootstrap decidido mas não implementado (`docs-human/pendencias.md`, seção Kubernetes: A) EC2+k3s, B) cert-manager, C) GitLab Kubernetes Agent, D) os 4 operators). Nada aqui deve ser executado antes do passo D daquele kit estar de pé — isso é o passo seguinte, não paralelo.
 
 ## Por que isso é um arquivo separado, e não uma seção do `infra-local.md`
 

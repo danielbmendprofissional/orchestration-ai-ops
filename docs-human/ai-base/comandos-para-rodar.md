@@ -98,7 +98,7 @@ Escolha `gitlab.com`, depois "Login with a web browser" (ou "Token" se preferir 
 **Terminal: "PowerShell" (normal)**
 
 ```powershell
-cd "C:\Users\danib\source\repos\ai-base"
+cd "C:\Users\danib\source\repos\orquestracao-ai\ai-base"
 pi
 ```
 
@@ -115,7 +115,7 @@ Se abrir a interface do `pi` sem erro, deu tudo certo. Digite `/model` pra confi
 3. Em cada painel, rode:
 
 ```powershell
-cd "C:\Users\danib\source\repos\ai-base"
+cd "C:\Users\danib\source\repos\orquestracao-ai\ai-base"
 pi
 ```
 
@@ -130,7 +130,7 @@ Nenhuma dessas skills é escrita à mão neste repo: todas vêm de fora e são r
 **Terminal: "PowerShell" (normal)**, dentro da pasta do repo:
 
 ```powershell
-cd "C:\Users\danib\source\repos\ai-base"
+cd "C:\Users\danib\source\repos\orquestracao-ai\ai-base"
 ```
 
 **Matt Pocock (25 skills de engenharia — discovery, spec, tickets, TDD, review, apoio: debug, merge conflicts, retro, handoff) — ✅ já instalado, ver `docs/log-execucao.md`:**
@@ -224,7 +224,7 @@ O agente `qa` (`.pi/agents/qa.md`) usa esse mesmo `docker run` por baixo quando 
 
 ## 11. Nascimento de projeto novo — apontar pra infra compartilhada
 
-Toda vez que nascer um projeto novo (a partir deste template), rodar isso uma vez, apontando pro `docker-compose.yml` do repo `infra` já rodando:
+Toda vez que nascer um projeto novo (a partir deste template), rodar isso uma vez, apontando pro `docker-compose.yml` do repo `ai-infra` já rodando:
 
 **Postgres** — criar o banco (dentro do container do Postgres):
 
@@ -232,7 +232,7 @@ Toda vez que nascer um projeto novo (a partir deste template), rodar isso uma ve
 docker exec -it <container-postgres> psql -U postgres -c "CREATE DATABASE <projeto>;"
 ```
 
-Depois criar `infra/banco/<projeto>/init-db.sql` (organização interna do banco — schema por módulo ou não — é decisão do projeto, não tem padrão obrigatório aqui).
+Depois criar `ai-infra/banco/<projeto>/init-db.sql` (organização interna do banco — schema por módulo ou não — é decisão do projeto, não tem padrão obrigatório aqui).
 
 **RabbitMQ** — criar o vhost:
 

@@ -1,12 +1,12 @@
 # infra-setup
 
-Agent de configuração da infra compartilhada (repo `infra`). Roda com **Claude Code** — o `CLAUDE.md` desta pasta é carregado automaticamente como instrução de sistema quando você abre uma sessão aqui dentro. 
+Agent de configuração da infra compartilhada (repo `ai-infra`). Roda com **Claude Code** — o `CLAUDE.md` desta pasta é carregado automaticamente como instrução de sistema quando você abre uma sessão aqui dentro. 
 
 ## Como rodar
 
-1. Abre um terminal **dentro desta pasta** (não na raiz do `ai-ops`, não dentro de `infra`):
+1. Abre um terminal **dentro desta pasta** (não na raiz do `ai-ops`, não dentro de `ai-infra`):
    ```powershell
-   cd "C:\Users\danib\source\repos\ai-ops\agents\infra\local-environment-config"
+   cd "C:\Users\danib\source\repos\orquestracao-ai\ai-ops\agents\infra\local-environment-config"
    claude
    ```
 2. Descreve o pedido — três casos:
@@ -23,4 +23,4 @@ Nada de AWS, Kubernetes, `git push`, merge, `.gitlab-ci.yml`, restore de backup 
 
 ## Sobre os caminhos relativos
 
-Esta pasta fica 4 níveis abaixo da raiz do `ai-ops` (`agents/infra/local-environment-config/`). `infra` é pasta irmã da raiz do `ai-ops`, não desta pasta — o caminho relativo daqui até ela é `../../../../infra`. A pasta de projeto que o agent configura na Etapa 2 não tem caminho fixo — é sempre a que o humano indicar, com nome próprio (ex. `projeto-x`, nunca `ai-base`). Ver `CLAUDE.md` pra como o agent usa isso, inclusive o único ponto em que ele lida com `ai-base` (nascimento de projeto novo).
+Esta pasta fica 4 níveis abaixo da raiz do `ai-ops` (`agents/infra/local-environment-config/`). `ai-infra` é pasta irmã da raiz do `ai-ops`, não desta pasta — o caminho relativo daqui até ela é `../../../../ai-infra`. A pasta de projeto que o agent configura na Etapa 2 não tem caminho fixo — é sempre a que o humano indicar, com nome próprio (ex. `projeto-x`, nunca `ai-base`). Ver `CLAUDE.md` pra como o agent usa isso, inclusive o único ponto em que ele lida com `ai-base` (nascimento de projeto novo).
