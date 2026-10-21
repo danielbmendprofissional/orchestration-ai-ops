@@ -4,6 +4,10 @@ Roteiro prático, na ordem em que as coisas acontecem. Cada passo diz **onde abr
 
 Exemplo usado: `<projeto>` = `esteira` (primeiro projeto criado seguindo este guia). Onde a Esteira está hoje: seção final.
 
+- **Parte 1 (passos 0–13):** montar o projeto e a referência de cada etapa.
+- **Parte 2:** o processo do dia a dia: o ciclo de cada fatia e onde **você** valida.
+- **Parte 3:** a primeira rodada da Esteira (frontend), com o primeiro comando.
+
 ```
 0. máquina pronta (uma vez)
 1. GitLab: grupo + 3 repositórios
@@ -264,6 +268,180 @@ Quando todas as specs da rodada estiverem em `dev`: tag `vX.Y.Z-rcN` → `dev �
 
 ---
 
+# Parte 2 — O processo: o ciclo de cada fatia
+
+Os passos 0–4 se fazem **uma vez por projeto**. Daqui pra frente, todo trabalho é o mesmo ciclo, repetido fatia por fatia. O que muda entre fatias é só o conteúdo, nunca a ordem.
+
+## Quem faz o quê
+
+| Quem | Papel | Onde |
+|---|---|---|
+| **Você** | Decide, aprova e valida. É o único que aprova spec, merge e design | — |
+| **Claude Code** | Pensa: discovery, arquitetura, ADR, spec, tickets, bootstrap, design system, review | `claude` na raiz do workspace |
+| **`pi` (agente-pai)** | Executa uma spec: encadeia os subagents, commita na branch de feature | `pi` na raiz do workspace, um painel do Alethe por spec |
+| **Subagents** | `data`, `backend`, `front`, `ui`, `tests`, `security`, `review`, cada um num combo do OmniRoute | chamados pelo `pi`, nunca por você |
+
+Regra prática: **se exige julgamento, é Claude Code; se é mecânico com contrato fechado, é `pi`**.
+
+## O ciclo (com os pontos onde você valida)
+
+```
+ ┌─ 1. Discovery         /grill-with-docs              Claude Code ─┐
+ │  2. Arquitetura       ADR (se for decisão transversal)            │  você responde
+ │  3. Spec              /to-spec                                    │
+ │     ✋ VOCÊ: lê cada EARS e aprova                                ─┘
+ │  4. Tickets           /to-tickets  → issues no GitLab
+ │     ✋ VOCÊ: confere dependências e o "ready-for-agent"
+ │  5. Branch            git -C <repo> switch -c feature/<n>-<nome> dev
+ │  6. Execução          pi → /implement-task ...       pi + subagents
+ │     ✋ VOCÊ: acompanha o painel; lê o "Para o pai" de cada hop
+ │  7. Ver funcionando   ng serve / dotnet run, abrir no navegador
+ │     ✋ VOCÊ: testa o fluxo da spec na mão
+ │  8. Design (se tem tela) /impeccable critique|audit contra o localhost
+ │     ✋ VOCÊ: compara com as referências e aprova o visual
+ │  9. Review            /code-review                  Claude Code
+ │     ✋ VOCÊ: lê os achados; FAIL volta pro passo 6
+ │ 10. Entrega           commit → push → MR pra dev
+ │     ✋ VOCÊ: aprova o merge
+ └─11. Retro (opcional)  /retro → ajusta skill/agent/ADR que falhou
+```
+
+### 1–3. Discovery, arquitetura e spec (Claude Code)
+
+```powershell
+cd <workspace>; claude
+```
+
+```
+/grill-with-docs Quero a fatia <nome>: <o que entrega, 2-3 frases>.
+Leia antes: CONTEXT-MAP.md, docs/adr/, specs/README.md e <referências da fatia>.
+```
+
+- Ele pergunta uma coisa por vez. "Não sei, recomende" é resposta válida; a recomendação dele passa a ser decisão só quando você aceita.
+- Decisão que vale pra mais de uma fatia → peça "registra isso como ADR". Decisão só da fatia fica na spec.
+- Questão de arquitetura de código (camadas, onde algo mora) → `/codebase-design` ou `/improve-codebase-architecture`.
+- Fechou o discovery → `/to-spec`. Ele grava `specs/feature/<área>/NN-nome.md` e abre a issue-mãe.
+
+**Como validar a spec:** cada EARS tem que ser testável ("QUANDO a lista carrega sem fluxos, O SISTEMA DEVE mostrar o estado vazio"). EARS vago ("deve ser bonito") volta pro grill. O `## Contexto necessário` precisa listar tudo o que o executor tem que ler, inclusive referências visuais. Aprovou a spec, ela vira o contrato dos testes.
+
+### 4. Tickets (Claude Code)
+
+```
+/to-tickets specs/feature/<área>/NN-nome.md
+```
+
+Confira no GitLab: uma issue por fatia vertical fina, `blocks`/`blocked by` corretos, label de área e `ready-for-agent` só na que está desbloqueada.
+
+### 5–6. Execução (pi)
+
+```powershell
+cd <workspace>
+git -C <projeto>-frontend switch -c feature/<n>-<nome-curto> dev
+pi
+```
+
+```
+/implement-task Implementar <grupo>/<projeto>-workspace#<n>. Spec: specs/feature/<área>/NN-nome.md.
+Leia o "Contexto necessário" da spec antes de começar.
+```
+
+O que observar em cada hop, e o que fazer:
+
+| Sinal | O que significa | O que você faz |
+|---|---|---|
+| hop devolve Completado / Arquivos / Suposições / Para o pai | normal | lê as **Suposições**: suposição errada é a origem da maioria dos retrabalhos |
+| `tests` escreve teste antes do código | TDD funcionando | — |
+| asserção afrouxada, `skip`, teste comentado | quebra da regra | interrompe; isso é FAIL mesmo que o `review` deixe passar |
+| `review` FAIL uma vez | normal | deixa o pai reabrir o hop |
+| `review` FAIL de novo | spec ou contrato ambíguo | **para**; volta pro Claude Code e corrige a spec, não o agente |
+| subagent "inventou" contrato de API | falta contrato | registra no ticket; nunca aceite formato inventado |
+| `pi` sem modelo | OmniRoute fora | `node omniroute-config.mjs diff` no `ai-infra` |
+
+### 7. Ver funcionando
+
+- Frontend: `cd <projeto>-frontend; npm start` → `http://localhost:4200`. API: `dotnet run` (credenciais via user-secrets, passo 3).
+- Percorra cada EARS da spec na mão. Testes verdes não substituem isso.
+- `npm test` e `npm run e2e` (quando houver) precisam passar localmente.
+
+### 8. Design (fatia com tela)
+
+Com o app rodando, no Claude Code:
+
+```
+/impeccable critique http://localhost:4200/<rota>
+/impeccable audit http://localhost:4200/<rota>
+```
+
+- `critique` = avaliação de UX/hierarquia; `audit` = acessibilidade, contraste, estados. Correções: `/impeccable adapt|harden|polish|layout|typeset`.
+- `/skill:avoid-ai-design detect` como rede de segurança contra cara de "template de IA".
+- Compare com as referências do projeto (`docs/referencias/`, `docs/design/referencias.md`). Referência é inspiração: nunca copiar pacote React.
+- Aprovado o visual, o que for padrão (cor, espaçamento, componente) sobe pro `DESIGN.md`/preset, nunca fica só na tela.
+
+### 9. Review (Claude Code, sessão interativa)
+
+```
+/code-review
+```
+
+Dois eixos em paralelo: padrão do repositório (ADRs, `CLAUDE.md` do componente) e conformidade com a spec, incluindo o diff dos testes. Superfície sensível (auth, sessão, segredo, dependência nova) → `/security-review` também. PASS grava `<repo>/.pi/code-review-ok.json`.
+
+### 10. Entrega
+
+```powershell
+git -C <projeto>-frontend push -u origin feature/<n>-<nome-curto>
+```
+
+- Com o template-ci ligado: o job `verify-code-review` confere o sha e abre a MR pra `dev`.
+- **Sem template-ci (fase de testes):** abra a MR na mão: `glab mr create -R <grupo>/<projeto>-frontend --source-branch feature/<n>-<nome-curto> --target-branch dev --title "..." --description "Closes <grupo>/<projeto>-workspace#<n>"`.
+- Você aprova o merge. Publicação (tags/qa/hml/prod) é o passo 13 e só entra quando você decidir.
+
+### 11. Retro
+
+Depois de cada fatia, nos primeiros projetos sempre: `/retro`. O que falhou vira ajuste **no lugar certo**: regra de processo → `ai-base`; prompt de subagent → `.pi/agents/*.md` (e depois no `ai-base`); decisão do projeto → ADR. Nunca corrigir só "na conversa".
+
+## Paralelismo
+
+Specs sem dependência entre si rodam ao mesmo tempo, uma sessão `pi` por spec no Alethe, cada uma na sua branch. Você continua sendo o gargalo das aprovações. Comece com uma de cada vez até confiar nos sinais da tabela acima.
+
+---
+
+# Parte 3 — Primeira rodada da Esteira: frontend
+
+Objetivo desta rodada: **testar o processo** (grill, arquitetura, orquestração `pi`, review, design) construindo o frontend. Sem template-ci, sem publicação.
+
+Material que já existe no workspace (`ai-pipeline/esteira/`):
+- `docs/adr/0001`–`0007`: decisões tomadas (paginação, erros, BFF, stack e arquitetura do front, config em runtime, cadastro de aplicações).
+- `docs/referencias/tce-fluxo-deploy/`: telas e código do fluxo-deploy do TCE (o que você me mandou na conversa de 2026-10-21), com o que manter e o que não copiar.
+- `specs/README.md`: ordem das fatias.
+
+Ordem:
+
+| # | Fatia | Quem | O que você testa nela |
+|---|---|---|---|
+| 1 | **F0 — Bootstrap do frontend** | Claude Code | grill curto + spec de checklist; Claude faz `ng new` (Angular 22, zoneless, Vitest, PrimeNG, Tailwind, estrutura da ADR-0005, `public/config.json`, `proxy.conf.json` pra `/api`, `esteira-frontend/CLAUDE.md`) |
+| 2 | **D0 — Design system** | Claude Code + `impeccable` | `/impeccable init` com a direção de `docs/referencias/visual/` (maduro, nível GitLab; as telas do TCE são só referência funcional); preset PrimeNG + `@theme` Tailwind com os mesmos tokens; uma página de amostra pra você aprovar |
+| 3 | **F0.5 — Shell + sessão** | `pi` (`front`, `ui`, `tests`, `security`, `review`) | **primeira orquestração**: layout (sidebar + header da tela 01), `auth.service`, guards, interceptors de sessão e erro |
+| 4 | **F1 — Lista e criação de fluxo** | `pi` | spec com EARS de domínio; smart/dumb; tabela paginada (ADR-0002) |
+| 5 | **F2 — Detalhe + steps-bar + rotas por etapa** | `pi` | componente dumb puro, serviço com escopo de rota |
+| 6 | **F3 — Deploys, análises e modal de artefatos** | `pi` | densidade de dashboard, design das severidades |
+
+**Uma decisão pra levar ao grill da F0:** as fatias B1–B3 (paginação, erros, sessão BFF na `esteira-api`) ainda não existem. Pra não travar o frontend: (a) o front roda contra **fixtures/mock em dev** que já seguem o contrato das ADRs, e troca pra API real quando B1–B3 entrarem; ou (b) faz B1–B3 primeiro, em paralelo com F0/D0 (bom teste do subagent `backend`). Recomendação: **(b) em paralelo**, e mock só onde a API ainda não chegou.
+
+**Primeiro comando:**
+
+```powershell
+cd C:\Users\danib\source\repos\orquestracao-ai\ai-pipeline\esteira
+claude
+```
+
+```
+/grill-with-docs Fatia F0 — bootstrap do esteira-frontend (Angular), conforme ADR-0005 e ADR-0006.
+Leia antes: CONTEXT-MAP.md, docs/adr/, specs/README.md, docs/referencias/tce-fluxo-deploy/README.md.
+É uma fatia de infra: o resultado é uma spec-checklist em specs/feature/shell/00-bootstrap-frontend.md, no formato do Valuto.
+```
+
+---
+
 ## Onde a Esteira está (2026-10-21)
 
 | Passo | Estado |
@@ -272,6 +450,6 @@ Quando todas as specs da rodada estiverem em `dev`: tag `vX.Y.Z-rcN` → `dev �
 | 1 | ok — `esteira-workspace`, `esteira-api`, `esteira-frontend` no grupo `orchestration-ai/ai-pipeline/esteira` |
 | 2 | ok — workspace em `ai-pipeline/esteira/`, publicado em `main` (remote HTTPS) |
 | 3 | infra criada (manifesto, `verify` verde): banco `esteira` (`esteira_owner`/`esteira_app`), vhost `esteira`, Redis `esteira:*`, realm `esteira` + client `esteira-api` + usuário `dev`, `/metrics` na 5105. **Falta no código:** `appsettings.Development.json` ainda usa `postgres`/`guest` e senha versionada — trocar pelas chaves do contrato via user-secrets |
-| 4 | MCP do GitLab corrigido no `~/.claude.json` (variável `GITLAB_PERSONAL_ACCESS_TOKEN`); skills a instalar no workspace |
-| 6 | ADRs 0001–0007 escritas (paginação, erros, BFF, stack do front, config em runtime, cadastro de aplicações) |
-| 5/7/8 | próximo: discovery + spec das fatias B1/B2 (API) e F0 (bootstrap) — ordem em `ai-pipeline/esteira/specs/README.md` |
+| 4 | ok — skills instaladas no workspace (`.claude/skills`, `impeccable` em `.pi/skills`); MCP do GitLab conectado |
+| 6 | ADRs 0001–0007 escritas; referências do TCE em `docs/referencias/tce-fluxo-deploy/` |
+| Parte 3 | **próximo:** `/grill-with-docs` da F0 (comando no fim da Parte 3); B1–B3 da API em paralelo |

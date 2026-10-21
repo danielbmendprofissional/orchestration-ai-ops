@@ -20,6 +20,17 @@ npx skills add briiirussell/cybersecurity-skills -s '*' -a claude-code -y
    ```
    (`avoid-ai-design` vem por `git clone`, não colide com nenhuma de segurança hoje — se algum dia colidir, mesma regra.)
 2. **Verificar de verdade** no `skills-lock.json`: nenhuma skill com nome igual a uma base pode estar com `source` `getsentry/skills` ou `briiirussell/cybersecurity-skills`. Hoje a única colisão conhecida é `code-review` (deve estar `mattpocock/skills`); `commit` e `pr-writer` da Sentry não colidem e ficam. Achou outra colisão nova: reportar no relatório (qual nome, quais origens) — a regra já resolveu, é só registro.
-3. Abrir o `SKILL.md` de cada skill instalada (base e segurança) e confirmar/adicionar `disable-model-invocation: true` no frontmatter — os repositórios de origem não garantem esse campo sozinhos.
+3. Abrir o `SKILL.md` de cada skill instalada (base e segurança) e confirmar/adicionar `disable-model-invocation: true` no frontmatter — os repositórios de origem não garantem esse campo sozinhos. **Exceto as peças internas** — skills que outra skill chama pelo Skill tool. Essas ficam **sem** a flag (com ela, `/grill-with-docs`, `/implement`, `/triage` etc. param de funcionar: o modelo não consegue invocar a peça). Lista atual, calculada, nunca de memória — rodar dentro de `.claude/skills/` do projeto:
+   ```bash
+   grep -ohE 'Skill tool (twice, )?(with|for) [`"][a-z-]+[`"]( and [`"][a-z-]+[`"])?' */SKILL.md \
+     | grep -oE '[`"][a-z-]+[`"]' | tr -d '`"' | sort -u
+   ```
+   (em 2026-10-21: `code-review`, `codebase-design`, `domain-modeling`, `grilling`, `prototype`, `research`, `tdd`, `writing-for-agents`). Pra cada nome da lista, remover a linha `disable-model-invocation: true`:
+   ```bash
+   for n in $(grep -ohE 'Skill tool (twice, )?(with|for) [`"][a-z-]+[`"]( and [`"][a-z-]+[`"])?' */SKILL.md | grep -oE '[`"][a-z-]+[`"]' | tr -d '`"' | sort -u); do
+     [ -f "$n/SKILL.md" ] && sed -i '/^disable-model-invocation: true\r\?$/d' "$n/SKILL.md"
+   done
+   ```
+   Verificar: `/grill-with-docs` precisa conseguir chamar `grilling` e `domain-modeling` sem o usuário digitar as duas.
 
 Confirmar sempre via `/skills` dentro de uma sessão Claude Code depois de instalar.
