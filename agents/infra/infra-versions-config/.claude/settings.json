@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "defaultMode": "default",
+    "allow": [
+      "Bash(node infra-versions.mjs check*)",
+      "Bash(node infra-config.mjs verify*)",
+      "Bash(node infra-config.mjs diff*)",
+      "Bash(docker compose ps*)",
+      "Bash(docker info*)",
+      "Bash(docker inspect *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "PowerShell(node infra-versions.mjs check*)",
+      "PowerShell(node infra-config.mjs verify*)",
+      "PowerShell(node infra-config.mjs diff*)",
+      "PowerShell(docker compose ps*)",
+      "PowerShell(docker info*)",
+      "PowerShell(docker inspect *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Get-Process \"Docker Desktop\"*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.keycloak.org)",
+      "WebFetch(domain:www.rabbitmq.com)",
+      "WebFetch(domain:grafana.com)",
+      "WebFetch(domain:www.postgresql.org)",
+      "WebFetch(domain:www.pgadmin.org)"
+    ],
+    "deny": [
+      "Bash(docker volume rm*)",
+      "Bash(docker compose down -v*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "PowerShell(docker volume rm*)",
+      "PowerShell(docker compose down -v*)",
+      "PowerShell(git commit*)",
+      "PowerShell(git push*)"
+    ]
+  }
+}

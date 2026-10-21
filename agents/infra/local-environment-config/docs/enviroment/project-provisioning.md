@@ -1,41 +1,53 @@
-# Nascimento de projeto novo — provisionar na infra compartilhada
+# Provisionar um projeto na infra compartilhada
 
-Roda toda vez que um projeto novo precisa apontar pra infra compartilhada (repositório `ai-infra`, containers já de pé — ver `docs/infra/container-bootstrap.md` deste agent). `<projeto>` = nome do projeto.
+Banco, vhost, realm, usuário Redis e alvo de métricas de um projeto **não são criados com comando solto**: o projeto é declarado no manifesto `ai-infra/configs/infra/projects.json` e o `infra-config.mjs` cria/ajusta tudo, com os muros entre projetos. Ler antes `ai-infra/configs/infra/README.md` (manifesto, opções, segredos) e o contrato do lado do projeto em `docs/agents/infra-local.md` (dentro da pasta do projeto).
 
-**Nunca `-it`** — essas chamadas passam o comando inteiro como argumento (não abrem shell interativo), e `-it` pede um TTY que este agent não tem, podendo travar ou dar erro sem motivo aparente. Confirmar nome real do container antes de rodar, se tiver dúvida:
+Pré-requisito: infra de pé e verde (`docs/infra/container-bootstrap.md` deste agent). Todos os comandos abaixo rodam dentro de `ai-infra/configs/infra/`.
+
+## 1. Levantar o que o projeto usa
+
+Do próprio projeto (nunca adivinhar): Postgres? RabbitMQ? Redis? Keycloak? Porta do `/metrics` da API? Fontes: `CONTEXT-MAP.md`, ADRs (`docs/adr/`), `appsettings*.json`, `launchSettings.json`. Pro Keycloak: caminho do callback de login (ADR de autenticação — padrão BFF: `<frontend>/api/.../auth/callback`), roles, se a API usa Admin API (service account). Faltou informação → item "depende do humano", perguntar.
+
+Nome do projeto: só minúsculas e dígitos (vira banco/role/vhost/realm/prefixo).
+
+## 2. Editar o manifesto (agent executa)
+
+Acrescentar a entrada `<projeto>` em `projects.json` com só o que o projeto usa — formato e opções no `README.md` de lá. Projeto que cria as próprias roles por SQL (estilo Valuto): `postgres.roles: "project"`, `memberPattern` e `initScript` (`banco/<projeto>/init-db.sql` dentro do `ai-infra`). Projeto novo comum: `"postgres": {}` (owner + app padrão), sem pasta em `banco/`.
+
+Mostrar o diff do `projects.json` ao humano.
+
+## 3. Aplicar
+
 ```powershell
-docker compose -f ../../../../ai-infra/container/docker-compose.yml ps --format "{{.Name}}"
+node infra-config.mjs diff      # mostrar ao humano o que vai ser criado
+node infra-config.mjs apply
+node infra-config.mjs verify    # tem que terminar com "✔ tudo conferido"
 ```
 
-**Nunca assumir usuário/senha de admin fixo (`postgres`, admin default, etc.)** — ler `POSTGRES_USER`/`KEYCLOAK_ADMIN`/`KEYCLOAK_ADMIN_PASSWORD` de `ai-infra/container/.env` antes de qualquer comando abaixo. Esta infra, por exemplo, usa um usuário Postgres/Keycloak customizado, não o default de fábrica — comando com usuário errado falha (`role "postgres" does not exist`) ou, no caso do Keycloak, precisa de login explícito antes.
+Senhas do projeto: geradas pelo `apply` no `ai-infra/container/.env` (`PROJECT_<PROJETO>_*`) — nunca o agent gera/escreve/lê valor. Relatar só **onde** ficaram.
 
-**Postgres** — criar o banco (`$pgUser` = valor de `POSTGRES_USER` no `.env`):
+`verify` vermelho = erro (regra do item 8 do Fluxo obrigatório): parar e reportar a saída inteira.
+
+## 4. Ligar o projeto (dentro da pasta do projeto)
+
+O app lê as chaves do contrato (`docs/agents/infra-local.md` do projeto), que o `apply` gravou em `ai-infra/container/generated/projects/<projeto>.secrets.json`. Em dev, .NET via user-secrets — **agent executa** se o `.csproj` da API já existe:
+
 ```powershell
-docker exec <container-postgres> psql -U $pgUser -c "CREATE DATABASE <projeto>;"
+Get-Content <ai-infra>\container\generated\projects\<projeto>.secrets.json | dotnet user-secrets set --project <csproj da API>
 ```
-Depois criar `ai-infra/banco/<projeto>/init-db.sql` (dentro do repositório `ai-infra`, não deste agent — organização interna do banco é decisão do projeto, sem padrão obrigatório aqui). Acesso: pgAdmin em `http://localhost:15432` (perfil completo) ou `psql`/qualquer client em `localhost:5432`, banco `<projeto>`, usuário `$pgUser`.
 
-**RabbitMQ** — criar o vhost:
-```powershell
-docker exec <container-rabbitmq> rabbitmqctl add_vhost <projeto>
-docker exec <container-rabbitmq> rabbitmqctl set_permissions -p <projeto> guest ".*" ".*" ".*"
-```
-Acesso: management UI em `http://localhost:15672` (login conforme `.env` do `ai-infra`), vhost `<projeto>` no seletor.
+(O `.csproj` precisa de `UserSecretsId`; sem ele, `dotnet user-secrets init --project <csproj>` antes.)
 
-**Keycloak** — fazer login como admin antes (`kcadm.sh` não mantém sessão entre containers reiniciados), depois criar o realm (`$kcUser`/`$kcPass` = `KEYCLOAK_ADMIN`/`KEYCLOAK_ADMIN_PASSWORD` no `.env`):
-```powershell
-docker exec <container-keycloak> /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user $kcUser --password $kcPass
-docker exec <container-keycloak> /opt/keycloak/bin/kcadm.sh create realms -s realm=<projeto> -s enabled=true
-```
-Acesso: admin console em `http://localhost:8080` → login com `$kcUser` → seletor de realm no canto superior esquerdo → `<projeto>`.
+**Projeto "existente" com config apontando pra outra coisa** (superusuário do Postgres, `guest` do RabbitMQ, vhost `/`, Redis sem usuário, connection string em `appsettings.Development.json` versionado, nome de chave fora do contrato): candidato a "Modificar" — confirmação nominal item por item, nunca sobrescrever sozinho. É mudança de código/config do projeto; se precisar renomear chave lida pelo código, vira pendência pro humano/Claude Code, não deste agent.
 
-**Redis** — criar o ACL user restrito ao prefixo do projeto. **Gerar a senha de verdade antes de rodar o comando** (nunca deixar um placeholder tipo `senha-do-projeto` literal no comando — isso não é um valor que o humano fornece, é gerado aqui, mesma regra de "credencial gerada aqui: nunca hardcoded, avisar onde ficou guardada, nunca o valor em texto"):
-```powershell
-$senha = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 24 | ForEach-Object {[char]$_})
-docker exec <container-redis> redis-cli ACL SETUSER <projeto> on ">$senha" "~<projeto>:*" "+@all" "-@dangerous"
-```
-Guardar `$senha` onde as outras credenciais geradas já ficam guardadas (nunca versionado, nunca no chat) — só reportar o **local** onde foi guardada, nunca o valor. Acesso: sem UI própria; testar com `docker exec <container-redis> redis-cli -u redis://<projeto>:<senha>@localhost:6379 PING` (comando de teste, não expõe a senha no relatório, só na hora de rodar).
+## 5. Acessos pro relatório
 
-## Correção pra projeto "existente" com config apontando errado
+| Serviço | Onde | Usuário | Onde está a senha |
+|---|---|---|---|
+| Postgres | `localhost:5432`, banco `<projeto>` (pgAdmin http://localhost:15432, grupo `<projeto>`) | `<projeto>_owner` / `<projeto>_app` | `.env`: `PROJECT_<P>_PG_OWNER_PASSWORD` / `_PG_APP_PASSWORD` |
+| RabbitMQ | `localhost:5672`, vhost `<projeto>` (UI http://localhost:15672 com o admin) | `<projeto>` | `.env`: `PROJECT_<P>_RABBITMQ_PASSWORD` |
+| Redis | `localhost:6379`, prefixo `<projeto>:` | `<projeto>` | `.env`: `PROJECT_<P>_REDIS_PASSWORD` |
+| Keycloak | http://localhost:8080/admin → realm `<projeto>`; client `<projeto>-api`; usuário de teste `dev` | — | `.env`: `PROJECT_<P>_KEYCLOAK_CLIENT_SECRET` / `_KEYCLOAK_DEV_PASSWORD` |
+| Logs/métricas | Grafana http://localhost:3000, pasta `infra`, filtro Projeto = `<projeto>` | admin do Grafana | `.env`: `GF_SECURITY_ADMIN_PASSWORD` |
 
-Se o projeto já tiver connection string/config (appsettings, `.env`, etc.) apontando pra um Postgres/Redis/RabbitMQ/Keycloak que não é este `ai-infra` compartilhado local (outra instância, `localhost` com porta diferente, container antigo) — isso é candidato a "Modificar", mesma confirmação nominal item por item da "Comparar com o template" no `CLAUDE.md`. Nunca sobrescrever esse valor sem aprovação explícita e nominal daquele item específico, mesmo que o resto do plano já tenha sido aprovado.
+Teste por item = a linha correspondente do `verify` (muros do Postgres/Redis/RabbitMQ, realm e segredo do Keycloak, alvo `projects (<projeto>)` no Prometheus — `down` é esperado enquanto a API não estiver rodando).

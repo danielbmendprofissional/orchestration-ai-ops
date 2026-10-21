@@ -5,7 +5,7 @@ Detalhe de como a infra compartilhada é montada de verdade. A IA não precisa d
 ## Kubernetes
 
 - **k3s**, não kubeadm/vanilla — distribuição leve, um binário só, já vem com Traefik e provisionamento de storage local. Mesmo Kubernetes de verdade (certificado CNCF, mesmo `kubectl`/manifests), mais simples de operar sozinho.
-- **1 nó por cluster pra começar** (control-plane + worker na mesma instância EC2) — escalar pra multi-nó quando a carga pedir. Lembrete: ver `pendencias.md` sobre não esquecer de escalar.
+- **1 nó por cluster pra começar** (control-plane + worker na mesma instância EC2) — escalar pra multi-nó quando a carga pedir. Lembrete: ver `ai-ops/PENDENCIAS.md` sobre não esquecer de escalar.
 - **Um cluster por projeto × ambiente** (Opção 3, decidida): cada projeto tem `qa`, `hml` e produção (`main`) isolados de verdade — cluster próprio, EC2 própria, nada compartilhado nem entre ambientes do mesmo projeto nem entre projetos diferentes. Isso escala N projetos × 3 ambientes = 3N clusters — aceito conscientemente, é o trade-off de ter isolamento total em todo lugar.
 - **Postgres/Redis/RabbitMQ/Keycloak dentro de cada cluster publicado** (não é o mesmo Docker Compose da infra de dev): cada cluster `qa`/`hml`/produção roda sua própria cópia desses serviços como workload do Kubernetes, dedicados só àquele projeto+ambiente. O Docker Compose compartilhado do `ai-infra` (com isolamento por banco/vhost/realm/prefixo entre projetos, ver `docs/agents/infra-local.md`) vale **só pro dev local** — nenhum ambiente publicado aponta de volta pra ele.
   - **Postgres → CloudNativePG (CNPG)** — operator, não chart Bitnami (Bitnami trancou a maioria das imagens grátis atrás de plano pago em 2025).

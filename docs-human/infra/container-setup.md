@@ -1,23 +1,31 @@
 # Subir a infra compartilhada local — docs-human
 
-**Você faz isso, não o agente sozinho** — envolve decidir senha/segredo real, mesmo que só de dev.
+**Os logins de admin são seus** (mesmo que só de dev). O resto, inclusive as senhas de máquina, o script faz.
 
 ## Primeira vez numa máquina nova
 
-1. Copiar `container/examples/env.example` pra `container/.env` (o `.gitignore` já cobre `.env`, nunca vai pro git).
-2. Preencher os valores reais — cada bloco do arquivo é um grupo (Postgres, RabbitMQ, Keycloak, Observability/Grafana). Guarda as senhas do jeito que você já guarda as outras.
-3. Dentro de `container/`:
+1. Copiar `container/examples/env.example` pra `container/.env` (o `.gitignore` já cobre, nunca vai pro git).
+2. Preencher **só os logins de admin** (Postgres, pgAdmin, RabbitMQ, Keycloak, Grafana, OmniRoute). As senhas de máquina (serviço↔serviço e de cada projeto) o script gera e acrescenta no fim do `.env`.
+3. Subir, configurar e verificar:
    ```powershell
-   docker compose up -d --build
+   cd ai-infra\configs\infra
+   node infra-config.mjs up
    ```
-   `--build` é obrigatório — o Postgres builda local (pgAudit), não é imagem pronta.
+4. **Backup do `.env`** (Drive/gerenciador de senhas) — as senhas de máquina se regeneram com `apply` se o arquivo sumir; as chaves de provider do OmniRoute, não.
+
+Nunca `docker compose up` puro numa máquina nova: o Redis não sobe sem o `.acl` gerado e o Keycloak precisa da role que o script cria.
 
 ## Confirma que subiu
 
-Postgres (`5432`), pgAdmin (`15432`), Keycloak (`8080`), Redis (`6379`), RabbitMQ (`15672`), Grafana (`3000`), Prometheus (`9090`).
+`node infra-config.mjs verify` — termina com `✔ tudo conferido`. Prova saúde, portas só em 127.0.0.1, cada container só com os próprios segredos, e os muros entre projetos (Postgres, Redis, RabbitMQ, Keycloak). Acessos: `ai-infra/README.md`.
 
-Se o serviço `falco` não subir (risco conhecido em Docker Desktop/WSL2, driver eBPF pode não ter BTF): comenta ele no `docker-compose.yml` e segue, não bloqueia o resto.
+Falco fica no compose num perfil desligado (não roda no Docker Desktop/WSL2) — lembrete pro Kubernetes, ver `ai-ops/PENDENCIAS.md`.
 
 ## Se `.env` já existe e só precisa atualizar 1 valor
 
-Edita direto, não precisa recriar do zero. `docker compose up -d` de novo já pega o valor novo pros serviços que dependem dele (alguns pedem restart do container específico: `docker compose restart <serviço>`).
+- Login de admin: edita direto e `docker compose restart <serviço>`. Grafana, Keycloak e RabbitMQ só usam o valor quando o volume nasce — trocar senha de admin que já existe é pela UI de cada um (e depois atualizar o `.env`, que os scripts usam pra logar).
+- Segredo de máquina (`PG_*`, `REDIS_*`, `PROJECT_*`): apaga a linha e roda `node infra-config.mjs apply` — gera outra e reaplica em todo lugar. Depois recarregar o user-secrets do projeto.
+
+## Atualizar versão de imagem
+
+Só pelo agent `ai-ops/agents/infra/infra-versions-config`. Pra só olhar: `node infra-versions.mjs check`.

@@ -11,7 +11,7 @@ Agent de configuração da infra compartilhada (repo `ai-infra`). Roda com **Cla
    ```
 2. Descreve o pedido — três casos:
    - **Projeto que ainda não existe:** "quero criar um projeto novo".
-   - **Projeto que já existe:** "configura o projeto em `<caminho completo>`" — **sempre** com o `claude` aberto dentro desta pasta (passo 1), nunca de dentro da pasta do projeto: abrir `claude` lá carregaria o `CLAUDE.md` do próprio projeto (herdado do `ai-base`), não este agent.
+   - **Projeto que já existe** (inclusive aplicação antiga, sem ambiente de IA ou com `ai-base` velho): "configura o projeto em `<caminho completo>`" — ele **recria o ambiente**: inventário, docs/agents/hooks do template atual adaptados ao layout do projeto (que nunca é convertido), casa na infra compartilhada, e uma spec + issue de adequação pro que for código (ele não mexe em código nem migra dados). Procedimento: `docs/enviroment/recriar-projeto.md`. — **sempre** com o `claude` aberto dentro desta pasta (passo 1), nunca de dentro da pasta do projeto: abrir `claude` lá carregaria o `CLAUDE.md` do próprio projeto (herdado do `ai-base`), não este agent.
    - **Necessidade específica de infra:** descreve o que falta (ex: "esse projeto precisa de um serviço X a mais no infra").
 3. O agent responde com um **plano detalhado**, item por item. Lê com atenção.
 4. Aprova (ou pede ajuste) — só depois disso ele executa.

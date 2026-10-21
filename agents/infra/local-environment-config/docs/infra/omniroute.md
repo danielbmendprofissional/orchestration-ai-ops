@@ -4,7 +4,7 @@ OmniRoute é o gateway OpenAI-compatible que fica na frente de todos os modelos 
 
 **Configuração é código:** tudo (providers, combos, settings, keys) vive em `ai-infra/configs/omniroute/config/*.json` (git, sem segredo) + `ai-infra/container/.env` (segredos), aplicado por `ai-infra/configs/omniroute/omniroute-config.mjs`. Ler `ai-infra/configs/omniroute/README.md` (como funciona) e `combos.md` (por quê) antes deste procedimento. O agent **nunca configura pelo dashboard** — só pelo script, que é idempotente e tem `diff` (dry-run).
 
-Roda depois de `docs/infra/container-bootstrap.md` (o container sobe junto, perfil essencial) e depois de `docs/enviroment/pi-dev.md` (o passo 5 abaixo escreve config do `pi`).
+Roda depois de `docs/infra/container-bootstrap.md` (o container sobe junto no `infra-config.mjs up`) e depois de `docs/enviroment/pi-dev.md` (o passo 5 abaixo escreve config do `pi`).
 
 ## 1. Instância antiga fora do Docker (migração, uma vez só)
 

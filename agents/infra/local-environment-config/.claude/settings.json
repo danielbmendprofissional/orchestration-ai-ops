@@ -23,6 +23,10 @@
       "Bash(winget list *)",
       "Bash(code --list-extensions*)",
       "Bash(where *)",
+      "Bash(node infra-config.mjs verify*)",
+      "Bash(node infra-config.mjs diff*)",
+      "PowerShell(node infra-config.mjs verify*)",
+      "PowerShell(node infra-config.mjs diff*)",
       "PowerShell(node -v*)",
       "PowerShell(npm -v*)",
       "PowerShell(git --version*)",
@@ -44,6 +48,12 @@
       "PowerShell(code --list-extensions*)",
       "PowerShell(where.exe *)",
       "PowerShell(Get-Process \"Docker Desktop\"*)"
+    ],
+    "deny": [
+      "Bash(docker volume rm*)",
+      "Bash(docker compose down -v*)",
+      "PowerShell(docker volume rm*)",
+      "PowerShell(docker compose down -v*)"
     ]
   }
 }

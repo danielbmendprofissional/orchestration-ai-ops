@@ -8,15 +8,14 @@ Sequência única, da máquina limpa até publicado de verdade. Cada passo apont
 
 ## 2. Subir a infra compartilhada local
 
-Uma vez só por máquina, fica rodando pra todo projeto. Repo `ai-infra`, dentro de `container/`:
+Uma vez só por máquina, fica rodando pra todo projeto. Repo `ai-infra`, sempre pelo script (nunca `docker compose up` puro):
 
 ```powershell
-docker compose up -d --build
+cd ai-infra\configs\infra
+node infra-config.mjs up
 ```
 
-`--build` é obrigatório — o Postgres não é mais imagem pronta, builda local com pgAudit (`files/postgres/Dockerfile`). Primeira subida demora mais por causa disso.
-
-Confere que subiu: Postgres (`5432`), pgAdmin (`15432`), Keycloak (`8080`), Redis (`6379`), RabbitMQ (`15672`), Grafana (`3000`), Prometheus (`9090`). Se o serviço `falco` não subir (risco conhecido em Docker Desktop/WSL2), comenta ele no `docker-compose.yml` e segue — não bloqueia o resto.
+Sobe na ordem certa, configura todos os projetos do manifesto e termina com `verify` (`✔ tudo conferido`). Portas só em `127.0.0.1`: Postgres `5432`, pgAdmin `15432`, Keycloak `8080`, Redis `6379`, RabbitMQ `5672`/`15672`, Grafana `3000`, Prometheus `9090`. Falco fica num perfil desligado (não roda no Docker Desktop). Detalhe: `ai-infra/configs/infra/README.md`.
 
 ## 3. Criar o repo do projeto a partir do `ai-base`
 
@@ -24,13 +23,7 @@ Copiar a estrutura do template pro repo novo (`docs/`, `docs-human/`, `.pi/agent
 
 ## 4. Apontar pra infra compartilhada (nascimento de projeto)
 
-Rodar os comandos do passo 11 de `comandos-para-rodar.md`:
-- Postgres: criar banco `<projeto>` + `ai-infra/banco/<projeto>/init-db.sql` (organização interna — schema por módulo ou não — é decisão do projeto).
-- RabbitMQ: criar vhost `<projeto>`.
-- Keycloak: criar realm `<projeto>`.
-- Redis: criar ACL user `<projeto>` restrito a `<projeto>:*`.
-
-Guardar as senhas geradas do jeito que você já guarda as outras (nunca versionado).
+Entrada `<projeto>` em `ai-infra/configs/infra/projects.json` → `node infra-config.mjs apply` → `verify` (passo 11 de `comandos-para-rodar.md`). Cria banco + roles owner/app, vhost + usuário, realm + client `<projeto>-api` + usuário `dev`, usuário Redis em `<projeto>:*` — cada um sem enxergar os outros projetos. Senhas geradas no `ai-infra/container/.env`; o app lê `generated/projects/<projeto>.secrets.json` (contrato em `ai-base/docs/agents/infra-local.md`).
 
 ## 5. Configurar a API .NET pros pontos fixos de infra
 
@@ -41,7 +34,7 @@ Regra do `ai-base` (`docs/agents/infra-local.md`, `docs/agents/observabilidade-b
 
 ## 6. Registrar o projeto no Prometheus
 
-Adicionar 1 linha nova em `ai-infra/container/prometheus.yml`, apontando pro `/metrics` da API do projeto.
+Campo `"metrics": "host.docker.internal:<porta>"` do projeto no `projects.json` + `apply`. Nunca editar `prometheus.yml` por projeto.
 
 ## 7. Ligar a esteira de CI/CD
 
@@ -79,7 +72,7 @@ Resumo da ordem lá dentro: instalar `k3d` → subir 2 clusters (`qa`/`hml` loca
 
 ## 11. Publicar pela primeira vez — nuvem de verdade (AWS)
 
-Aqui entra o Kubernetes de produção. Kit de bootstrap completo (comandos exatos) em `docs-human/infra.md` + `docs-human/pendencias.md`, seção Kubernetes:
+Aqui entra o Kubernetes de produção. Kit de bootstrap completo (comandos exatos) em `docs-human/infra.md` + `ai-ops/PENDENCIAS.md`, seção Kubernetes:
 - A) Criar EC2 + instalar k3s.
 - B) cert-manager + `ClusterIssuer` Let's Encrypt (domínio público de verdade, diferente do self-signed do passo 10).
 - C) Registrar o GitLab Kubernetes Agent (novo registro — o do passo 10 era local, não migra).

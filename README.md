@@ -2,6 +2,11 @@
 
 Repo geral de AI apartados de projetos, inclui agents, skills, instructions que eu mesmo fiz, documentação (docs-human) referente a ai-base, infra, template, conceitos
 
+## Arquivos da raiz
+
+- `COMO-CRIAR-UM-PROJETO.md` — roteiro humano, do zero até a esteira (a IA não lê).
+- `PENDENCIAS.md` — pendências do ecossistema (ai-base, ai-infra, ai-ops, OmniRoute, Kubernetes). Pendência de um projeto fica no repo do projeto.
+
 ## Estrutura - Agents
 
 Cada agent vive na sua própria pasta, organizada por domínio:
@@ -23,6 +28,7 @@ Cada pasta de agent tem seu próprio `README.md` — este arquivo aqui é só o 
 | Agent | Domínio | Ferramenta | Onde |
 |---|---|---|---|
 | `local-environment-config` | infra | Claude Code | `agents/infra/local-environment-config/` |
+| `infra-versions-config` | infra | Claude Code | `agents/infra/infra-versions-config/` |
 
 Ver o `README.md` de cada pasta pra detalhe de uso.
 

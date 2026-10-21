@@ -55,7 +55,7 @@ Nem tudo que aparece listado por aí como "incluído no Plus" é confiável — 
 
 - Créditos extra de Google AI além da cota do Plus (implicaria upgrade Pro/Ultra).
 - Figma pago.
-- Ver `pendencias.md` pras ferramentas com status não confirmado no seu tier (Stitch, Jules, Imagen dedicado, Whisk).
+- Ver `ai-ops/PENDENCIAS.md` pras ferramentas com status não confirmado no seu tier (Stitch, Jules, Imagen dedicado, Whisk).
 
 ### Como decidir na prática
 

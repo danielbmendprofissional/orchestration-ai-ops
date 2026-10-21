@@ -6,17 +6,17 @@ Escopo: máquina local (Etapa 1, sem projeto) e a pasta de um projeto específic
 
 **`ai-base` só aparece em dois lugares deste arquivo, os dois na Etapa 2, os dois operações mecânicas — nunca uma pasta que persiste, nunca fonte de instrução pro agent seguir:**
 - **"Nascimento do projeto" (só "novo")** — clona pra dentro do repo recém-criado, uma única vez; a partir do commit inicial a pasta vira só "o projeto" (nome próprio, nunca `ai-base`).
-- **"Comparar com o template" (só "existente")** — clona numa cópia efêmera e read-only, só pra diff estrutural contra o projeto já existente; apagada ao final, nunca escrita.
+- **"Recriar o ambiente" (só "existente")** — clona numa cópia efêmera e read-only, só pra diff estrutural contra o projeto já existente; apagada ao final, nunca escrita.
 
 Fora desses dois passos, nada neste arquivo lê, cita ou depende de `ai-base` — Etapa 1 inteira e o resto da Etapa 2 tratam a pasta só como "o projeto".
 
-**Regra de desambiguação de caminho:** este agent **não lê nenhum doc de dentro de `ai-base` como instrução pra si mesmo** — toda instrução de setup de máquina (o que hoje seria `docs/agents`, `docs/design`, `docs/environment`, `docs/tools` de um `ai-base` isolado) vive nesta própria pasta do agent. (A "Comparar com o template", mais abaixo, inspeciona arquivos de dentro do `ai-base` pra fazer diff — isso é operação mecânica de comparação, não leitura de instrução, e não muda essa regra.) Um caminho citado abaixo sem prefixo de repo é sempre um destes três, nunca ambíguo:
+**Regra de desambiguação de caminho:** este agent **não lê nenhum doc de dentro de `ai-base` como instrução pra si mesmo** — toda instrução de setup de máquina (o que hoje seria `docs/agents`, `docs/design`, `docs/environment`, `docs/tools` de um `ai-base` isolado) vive nesta própria pasta do agent. (A "Recriar o ambiente", mais abaixo, inspeciona arquivos de dentro do `ai-base` pra fazer diff — isso é operação mecânica de comparação, não leitura de instrução, e não muda essa regra.) Um caminho citado abaixo sem prefixo de repo é sempre um destes três, nunca ambíguo:
 
 - `docs/enviroment/...`, `docs/infra/...`, `docs/tools/...` → dentro desta pasta do agent (só essas três subpastas existem aqui — instrução, não alvo).
 - `ai-infra/...` → dentro do repositório `ai-infra` (pasta irmã) — alvo.
 - `docs/agents/...`, `docs/design/...` (só aparecem na Etapa 2) → dentro da pasta do **projeto** sendo configurado, no caminho que o humano indicou (ver pré-requisito de invocação da Etapa 2) — nunca dentro de uma pasta `ai-base`. O que hoje é `infra-local.md`/`observabilidade-backup.md`/`security-review.md`/`component-library.md`/`tokens.md`/`principios.md` citados abaixo já fazem parte da estrutura padrão de todo projeto.
 
-**Regra de leitura:** cada item abaixo aponta o `.md` (desta pasta, do `ai-infra`, ou do projeto, pela regra acima) que tem o procedimento exato — sempre ler antes de executar aquele item. `docs-human/` é fonte proibida pra este agent, em qualquer um desses lugares: escrita pro humano digitar ele mesmo, nunca pra agent seguir. Se algum dia um item precisar de algo que só existe em `docs-human/`, parar e reportar que falta a versão `docs/` — nunca ler o `docs-human/` como substituto. Na Etapa 2, `docs/agents/domain.md`, `orchestration.md`, `workflow.md`, `esteira-deploy.md`, `issue-tracker.md`, `triage-labels.md` dentro do projeto são doc de uso **durante** o projeto (Claude Code arquiteto, subagents do `pi.dev`) — este agent nunca segue o que eles instruem, só os citados explicitamente abaixo importam pra esse fim. Exceção mecânica: "Comparar com o template" (Etapa 2, "existente") inclui esses mesmos arquivos no diff estrutural contra o `ai-base` — isso é comparação de presença/conteúdo, não leitura de instrução, e não muda essa regra.
+**Regra de leitura:** cada item abaixo aponta o `.md` (desta pasta, do `ai-infra`, ou do projeto, pela regra acima) que tem o procedimento exato — sempre ler antes de executar aquele item. `docs-human/` é fonte proibida pra este agent, em qualquer um desses lugares: escrita pro humano digitar ele mesmo, nunca pra agent seguir. Se algum dia um item precisar de algo que só existe em `docs-human/`, parar e reportar que falta a versão `docs/` — nunca ler o `docs-human/` como substituto. Na Etapa 2, `docs/agents/domain.md`, `orchestration.md`, `workflow.md`, `esteira-deploy.md`, `issue-tracker.md`, `triage-labels.md` dentro do projeto são doc de uso **durante** o projeto (Claude Code arquiteto, subagents do `pi.dev`) — este agent nunca segue o que eles instruem, só os citados explicitamente abaixo importam pra esse fim. Exceção mecânica: "Recriar o ambiente" (Etapa 2, "existente") inclui esses mesmos arquivos no diff estrutural contra o `ai-base` — isso é comparação de presença/conteúdo, não leitura de instrução, e não muda essa regra.
 
 ## Fluxo obrigatório — toda etapa, todo item
 
@@ -45,7 +45,7 @@ Dúvida entre os dois: classifica como "depende do humano".
 - AWS, Kubernetes de produção, qualquer recurso que custe dinheiro.
 - `git commit` (e `git add` como preparação pra commit), `git push`, merge, mudança em `.gitlab-ci.yml` de qualquer projeto — em qualquer repositório que este agent toca (`ai-infra`, o projeto sendo configurado), mesmo depois de aprovação. Este agent só edita/cria/apaga arquivo em disco; decidir o que entra num commit, a mensagem, e commitar/dar push é sempre o humano, depois de revisar a alteração.
 - Restore de backup contra dado real.
-- Deletar/sobrescrever config já em uso, incluindo qualquer remoção sugerida pela "Comparar com o template" (Etapa 2, "existente") — confirmação nominal item por item, mesmo dentro de plano já aprovado.
+- Deletar/sobrescrever config já em uso, incluindo qualquer remoção sugerida pela "Recriar o ambiente" (Etapa 2, "existente") — confirmação nominal item por item, mesmo dentro de plano já aprovado.
 - Task Scheduler do SO. Inclui a decisão do `pgdsat` (manual vs. agendado) — sinaliza que segue em aberto, não decide.
 - Configuração do Claude Desktop (app gráfico) e Figma — config de máquina, manual, fora de qualquer agent.
 
@@ -79,7 +79,7 @@ Roda uma vez por máquina, sem nenhum projeto envolvido.
 9. `npm install -g @angular/cli` (versão mais recente publicada — nunca fixar em uma versão específica neste arquivo).
 10. `docs/tools/rtk.md` — RTK, opcional. Perguntar ao humano se quer instalar antes de rodar.
 11. Claude Desktop e Figma (MCP): config de máquina, manual, fora do escopo deste agent — só informar ao humano que existe, nunca configurar.
-12. Infra compartilhada — seguir `docs/infra/container-bootstrap.md` do início ao fim (procedimento já escrito pra agent: verificar `.env`, subir, confirmar saúde, devolver relatório).
+12. Infra compartilhada — seguir `docs/infra/container-bootstrap.md` do início ao fim (procedimento já escrito pra agent: verificar `.env`, `node infra-config.mjs up` — sobe, configura todos os projetos do manifesto e verifica os muros —, devolver relatório). Versão de imagem nunca é trocada aqui: isso é do agent `../infra-versions-config`.
     1. OmniRoute (gateway de LLM do `pi`, sobe junto no perfil essencial) — seguir `docs/infra/omniroute.md` do início ao fim: migração da instância antiga (export pra código), saúde, `apply` da configuração versionada (`ai-infra/configs/omniroute/config/` + segredos no `ai-infra/container/.env` — nunca pelo dashboard), provider `omniroute` em `~/.pi/agent/models.json`, prova com `pi-light`.
 13. VS Code — extensões e os 4 profiles conforme `ai-infra/configs/vscode/profiles.md`. **Ordem obrigatória, nunca inverter:**
     1. **Depende do humano primeiro:** criar os 3 profiles nomeados (`angular-frontend`, `dotnet-backend`, `devops` — `Default` já existe) e colar o `settings.json` de cada um (GUI, sem CLI pra isso) — parar e pedir, listar exatamente os nomes.
@@ -93,7 +93,7 @@ Roda uma vez por máquina, sem nenhum projeto envolvido.
 
 ## ETAPA 2 — Configuração de projeto (existente ou novo)
 
-**Detectar novo vs. existente**: nunca inferir sozinho. Perguntar direto ao humano: "este projeto ainda não existe (precisa ser criado do zero) ou já é um projeto em andamento?" — **novo** roda "Nascimento do projeto" abaixo antes de qualquer outra coisa, depois os "Passos (novo e existente)"; **existente** roda "Comparar com o template" abaixo antes de qualquer outra coisa, depois os "Passos".
+**Detectar novo vs. existente**: nunca inferir sozinho. Perguntar direto ao humano: "este projeto ainda não existe (precisa ser criado do zero) ou já é um projeto em andamento?" — **novo** roda "Nascimento do projeto" abaixo antes de qualquer outra coisa, depois os "Passos (novo e existente)"; **existente** roda "Recriar o ambiente" abaixo antes de qualquer outra coisa, depois os "Passos". "Existente" cobre tanto projeto nascido de um `ai-base` antigo quanto aplicação que nunca teve ambiente de IA — o próprio inventário do "Recriar" descobre qual é o caso.
 
 **Pré-requisito de invocação — só "existente":** o `claude` desta sessão **sempre** é aberto de dentro da pasta deste agent (`agents/infra/local-environment-config/`) — nunca de dentro da pasta do projeto, senão carrega o `CLAUDE.md` do projeto (herdado do `ai-base`), não este arquivo. Esta etapa só começa se o humano **informou explicitamente o caminho completo do projeto** na mensagem — sem isso, o agent não sabe qual pasta configurar: parar e pedir o caminho antes de continuar, nunca assumir/adivinhar qual projeto é. Todos os comandos desta etapa usam esse caminho completo (absoluto ou `cd` pra lá antes de cada comando) — o terminal permanece fisicamente na pasta do agent. ("Novo" não tem esse pré-requisito — o endereço local é uma das perguntas da própria "Nascimento do projeto".)
 
@@ -141,48 +141,27 @@ Passos, nessa ordem:
 6. **Parar aqui — nunca `git add`/`git commit`/`git push` sozinho** (regra absoluta, ver "Fora de escopo — sempre humano" no topo deste arquivo). Devolver ao humano: URLs dos repositórios criados, a pasta do workspace pronta com os arquivos do template e as pastas dos componentes (nada commitado), e que o próximo passo é dele: revisar e commitar/dar push em cada repositório (`git -C <pasta> ...`).
 7. Só depois do humano confirmar, continuar pro scaffold de stack e pelos "Passos (novo e existente)" — a partir daqui a pasta é só "o projeto" (o workspace), sem mais nenhuma referência a de onde ela veio. Nos "Passos", o provisionamento de infra (banco, vhost, realm) usa o nome do **projeto**, não de cada repositório; observabilidade e `/metrics` se referem ao `<projeto>-api`.
 
-### Comparar com o template (só se "existente")
+### Recriar o ambiente (só se "existente")
 
-Missão: achar o que o projeto deveria ter (de acordo com o `ai-base` atual) e não tem, tem desatualizado, ou tem e o template não tem mais — nunca decidir sozinho, sempre reportar e confirmar item por item antes de agir.
+Missão: deixar o projeto como estaria se nascesse **hoje** do `ai-base` — ambiente de IA, casa na infra compartilhada, ferramental — **sem tocar em código, estrutura de repositório nem dados**. Vale pra projeto de `ai-base` antigo e pra aplicação que nunca teve ambiente de IA. Procedimento completo, decisões fixas e formato da spec: `docs/enviroment/recriar-projeto.md` (deste agent) — ler inteiro antes de começar.
 
-**Escopo — só estrutura/processo, nunca código de domínio nem o que o próprio projeto já sabidamente substituiu:**
-- `docs/agents/*.md` (`domain.md`, `orchestration.md`, `workflow.md`, `esteira-deploy.md`, `issue-tracker.md`, `triage-labels.md`, `infra-local.md`, `observabilidade-backup.md`, `security-review.md`, `kubernetes-security.md`, etc.) — processo/convenção fixa, sem motivo legítimo pra divergir do template atual.
-- `docs/design/*.md`, com uma exceção: **`tokens.md` nunca entra no diff se existir `DESIGN.md` na raiz do projeto** — nesse caso o próprio `tokens.md` do template já se declara superado (ver o arquivo), e comparar seria sugerir reverter a customização real de design do projeto.
-- `.claude/hooks/` (ex.: `block-dangerous-git.sh`) — guard-rail de segurança, sem motivo legítimo pra divergir.
-- `.pi/agents/*.md` — compara a estrutura toda, mas o campo `model:` nunca vira "Modificar" direto: troca de modelo é decisão de custo real (mesma regra de "Regra de classificação" no topo deste arquivo) — sempre cai em "depende do humano", mesmo que o resto do arquivo bata, nunca uma confirmação nominal simples de sincronizar.
+Resumo do que ele faz:
+1. **Inventário** só leitura: layout (workspace/monorepo/componente único — **mantido**, nunca convertido), componentes, origem do ambiente de IA (ai-base atual/antigo/nenhum), infra que o código usa hoje, observabilidade, esteira, recriação anterior.
+2. **Plano em quatro blocos**, com o `ai-base` atual numa cópia efêmera read-only:
+   - **A — ambiente de IA:** diff de `docs/agents`, `docs/design`, `.claude/hooks`, `.pi/agents` (campo `model:` = sempre "depende do humano"); `CLAUDE.md` existente = revisão manual com lista concreta; ausente = criado do template com a "Estrutura" do layout real; ADR de layout no projeto.
+   - **B — infra:** entrada no manifesto a partir do inventário (passo 1 dos "Passos"); compose próprio do projeto com Postgres/Redis/etc. = candidato a Remover; **dados não migram** (roteiro de dump/restore no relatório, o humano executa).
+   - **C — código:** tudo que exige mudar código/config do app vira **uma** spec de adequação (`specs/feature/infra/00-adequacao-ambiente.md`, checklist com `arquivo:linha`, nunca valor de senha) + issue `needs-triage` — implementada depois pelo fluxo normal, nunca por este agent.
+   - **D — ferramental:** "Passos" 2 a 8.
+3. Confirmação nominal item por item pra Adicionar/Modificar/Remover; nunca `git add`/`commit`; relatório com o sha do `ai-base` usado (base da próxima recriação).
 
-**Nunca compara, mesmo parecendo convenção:**
-- `src/`, `Modules/`, ou qualquer pasta de código de domínio do projeto.
-- `CONTEXT.md`, `CONTEXT-MAP.md`, `docs/adr/` — sempre donos do projeto; o `ai-base` não fixa estrutura pra eles (decidido em conversa via `/domain-modeling`, não por template).
-- `.claude/skills/` — instalado/atualizado por comando (`docs/enviroment/skills.md`), nunca por cópia de arquivo do template.
-- `.mcp.json` — já tem procedimento próprio (passo 3 dos "Passos" abaixo), não duplicar aqui.
-- `templates/*.gitlab-ci.yml` do template vs. `.gitlab-ci.yml` de cada repositório de código (`<projeto>-api`, `<projeto>-frontend`): só o `include` (`project`/`ref`) e as variáveis fixas do template — valores próprios do projeto nunca entram no diff.
-- `CLAUDE.md` na raiz do projeto — nasce do template, mas espera-se que cresça com conteúdo real por baixo das convenções fixas; diff mecânico geraria ruído. Em vez disso, listar como item de **revisão manual**: "confirme se as convenções fixas do `ai-base` (papéis das ferramentas, stack de frontend, convenção de branch, hook de git) ainda batem com a versão atual do template" — nunca sugerir sobrescrever o arquivo inteiro.
-
-Passos:
-1. Clonar uma cópia efêmera e read-only do `ai-base` atual, num diretório temporário — nunca reaproveitar clone antigo de uma sessão anterior (o template muda com o tempo), nunca escrever nela:
-   ```powershell
-   git clone --depth 1 https://gitlab.com/orchestration-ai/ai-base.git <pasta-temp>
-   ```
-2. Comparar essa cópia contra a pasta do projeto, só dentro do escopo acima. Classificar cada diferença encontrada:
-   - **Adicionar**: existe no template, não existe no projeto.
-   - **Modificar**: existe nos dois, mas o conteúdo do template mudou.
-   - **Remover**: existe no projeto (dentro do escopo comparado), não existe mais no template atual — é só candidato, nunca decide sozinho (pode ser customização legítima do projeto).
-   - **Revisar manualmente**: `CLAUDE.md` da raiz — nunca classificado como adicionar/modificar/remover.
-   - Campo `model:` de `.pi/agents/*.md` diferente: reportar à parte, sempre como "depende do humano" (decisão de custo), nunca junto do resto do diff daquele arquivo.
-3. Apagar a cópia temporária do template ao final da comparação — nunca deixar pairando como pasta extra.
-4. Apresentar a lista completa ao humano: cada item com a ação sugerida e o motivo.
-5. Confirmação nominal, item por item, pras três ações executáveis (adicionar/modificar/remover) — aprovação do plano geral não substitui essa confirmação por item.
-6. Executar só o aprovado, um por um, na ordem apresentada — só edita/cria/apaga arquivo em disco, nunca `git add`/`git commit` (regra absoluta, ver "Fora de escopo — sempre humano"). Fica com o humano revisar o diff e decidir commitar.
-
-Essa comparação roda **antes** do resto da Etapa 2 — o resultado dela vira parte do plano geral apresentado ao humano (Fluxo obrigatório, item 4), junto com os "Passos (novo e existente)" abaixo.
+Essa recriação roda **antes** do resto da Etapa 2 — o plano dela é o plano geral apresentado ao humano (Fluxo obrigatório, item 4), junto com os "Passos".
 
 ### Passos (novo e existente)
 
-1. Provisionar infra pro projeto (nome = nome do projeto informado na "Nascimento do projeto", ou nome da pasta se "existente"): banco Postgres, vhost RabbitMQ, realm Keycloak, ACL Redis. Regra geral: `docs/agents/infra-local.md` (dentro da pasta do projeto). Comandos exatos: `docs/enviroment/project-provisioning.md` (deste agent). Credencial gerada aqui: nunca hardcoded, avisar onde ficou guardada. **Projeto "existente" que já tem connection string/config apontando pra outro Postgres/Redis/etc.** (não o `ai-infra` compartilhado local): reportar como item "Modificar" (mesma confirmação nominal da "Comparar com o template") — corrigir pra apontar pro host/porta do `ai-infra` local, nunca decidir sozinho, é edição de config do projeto.
+1. Provisionar infra pro projeto (nome = nome do projeto informado na "Nascimento do projeto", ou nome da pasta se "existente"): entrada no manifesto `ai-infra/configs/infra/projects.json` (só o que o projeto usa: Postgres, RabbitMQ, Redis, Keycloak, `/metrics`) → `node infra-config.mjs apply` → `verify` verde → carregar o contrato no projeto (user-secrets). Nunca criar banco/vhost/realm/usuário por comando solto. Regra geral e contrato de nomes: `docs/agents/infra-local.md` (dentro da pasta do projeto). Procedimento exato: `docs/enviroment/project-provisioning.md` (deste agent). Senhas: geradas pelo script no `ai-infra/container/.env` (`PROJECT_<PROJETO>_*`) — reportar só onde ficaram. **Projeto "existente" com config/código apontando pra outra coisa** (outro Postgres/Redis, superusuário, `guest`, senha versionada, chave fora do contrato): não é editado aqui — vira item da spec de adequação ("Recriar o ambiente", bloco C).
 2. `.mcp.json` do projeto: bloco GitLab sempre (`"disabled": true`), GitHub só se o projeto precisar. Procedimento e template: `docs/infra/mcp-setup.md` + `docs/infra/mcp-snippets.md` (deste agent). Confirmar que a variável de ambiente referenciada já existe (Etapa 1, item 5) antes de escrever `${VAR}`.
 3. `docs/enviroment/skills.md` (deste agent) — skills base do projeto (Matt Pocock, Angular, `avoid-ai-design`). Roda em todo projeto (novo ou existente), sempre dentro da pasta do projeto — nunca reaproveita instalação de outro clone. Confirmar via `/skills`.
-4. Observabilidade: regra em `docs/agents/observabilidade-backup.md` (dentro da pasta do projeto). `/health`, `/metrics`, log JSON no código do projeto — verificar presença, nunca implementar (ausente = pendência de código pro humano/Claude Code, fora de escopo). **Registro em `ai-infra/container/prometheus.yml`** é diferente — esse arquivo é do repositório `ai-infra` (compartilhado), não código do projeto, e é a config do container `prometheus` que já está rodando (mesmo `docker compose`, já confirmado saudável na Etapa 1/container-bootstrap). O arquivo já vem com um template comentado pronto pra isso (`# cada API .NET nova entra aqui...`) — se `/metrics` já existe e o projeto ainda não está registrado lá, isso **é agent executa** (edição mecânica de config, mesmo padrão de criar banco/vhost/realm): descomentar/adicionar um `job_name: <projeto>` apontando `host.docker.internal:<porta>` (a porta que o `/metrics` do projeto expõe no host — o container do Prometheus enxerga o host por esse nome, não `localhost`). Se `/metrics` ainda não existe, não tem o que registrar: só reportar a pendência de código — **e deixar rastro dentro do projeto pra próxima rodada achar sozinha**, não só falar no chat: criar/atualizar `docs/adr/adr-observability-pendente.md` (seguir a numeração de ADR que o projeto já usa, se tiver) com status "Pendente" — `/health`/`/metrics` não implementados, registro no `prometheus.yml` aguardando. Se esse ADR já existir e o item já foi resolvido (endpoint agora existe), atualizar o status em vez de deixar desatualizado.
+4. Observabilidade: regra em `docs/agents/observabilidade-backup.md` (dentro da pasta do projeto). `/health`, `/metrics`, log JSON no código do projeto — verificar presença, nunca implementar (ausente = pendência de código pro humano/Claude Code, fora de escopo). **Registro no Prometheus** é diferente — é o campo `"metrics": "host.docker.internal:<porta>"` do projeto em `ai-infra/configs/infra/projects.json` (nunca editar `prometheus.yml` por projeto). Se `/metrics` já existe e o projeto ainda não tem `metrics` no manifesto, isso **é agent executa** (mesmo passo 1 acima): acrescentar o campo com a porta que o `/metrics` expõe no host (o container do Prometheus enxerga o host por `host.docker.internal`, não `localhost`) e `apply`. O `verify` mostra o alvo `projects (<projeto>)` — `up` com a API rodando. Se `/health`/`/metrics`/log ainda não existem, não tem o que registrar: a pendência de código **fica dentro do projeto pra próxima rodada achar sozinha** — vira item da spec de adequação `specs/feature/infra/00-adequacao-ambiente.md` (formato em `docs/enviroment/recriar-projeto.md`, bloco C; vale também pra projeto "novo" depois do scaffold). Já resolvido numa rodada seguinte: marcar o item da spec. ADR antigo `adr-observability-pendente.md`, se existir: marcar "Substituído pela spec".
 5. `impeccable` — **obrigatório, roda em todo projeto, não só se Angular**. **Nunca `npx impeccable install` puro** — bug confirmado e reproduzido na versão atual do pacote: o download (`https://impeccable.style/api/download/bundle/universal`) tem 3 saltos de redirect até o zip real (`impeccable.style` → `github.com/.../releases/download/...` → `release-assets.githubusercontent.com/...`), e o código do `impeccable` só segue 1 salto — sempre falha com `invalid zip data`, não é falha transitória de rede, **retry sozinho nunca resolve**. Usar o escape-hatch oficial do próprio pacote (variável `IMPECCABLE_BUNDLE_PATH`, existe no código pra exatamente esse tipo de caso):
    ```powershell
    Invoke-WebRequest -Uri "https://impeccable.style/api/download/bundle/universal" -OutFile "$env:TEMP\impeccable-universal.zip"
@@ -195,7 +174,7 @@ Essa comparação roda **antes** do resto da Etapa 2 — o resultado dela vira p
 6. Playwright via Docker: confirmar a tag mais recente em `https://mcr.microsoft.com/en-us/product/playwright/tags` antes de puxar (nunca fixar tag antiga), `docker pull mcr.microsoft.com/playwright:<tag-atual>`.
 7. Skills de segurança — **sempre no plano, instala tudo, sem menu de escolha** (não é mais preciso o humano lembrar de pedir separadamente): `docs/agents/security-review.md` (fluxo, dentro da pasta do projeto) e `docs/enviroment/security-skills.md` (comandos, deste agent — `-s '*'` nos dois repositórios, tudo desabilitado por padrão). Como qualquer item do plano, só executa se aprovado (é um único "sim/não", não uma seleção de subconjunto). Confirmar `disable-model-invocation: true` em cada `SKILL.md` instalado.
 8. `docs/enviroment/smoke-test.md` (deste agent) — testar tudo junto dentro da pasta do projeto, como validação final antes do relatório.
-9. Relatório final: o que foi configurado nesse projeto; se "novo", URL do repo criado e se o humano já confirmou o `push`; se "existente", o resultado da "Comparar com o template" — o que foi aprovado/aplicado e o que ficou pendente; **onde acessar cada coisa criada** (URL do admin console, porta, usuário — nunca senha em texto) — não só "criei X", mas "acesse em Y pra ver/configurar"; onde cada credencial nova ficou; comando de teste por item.
+9. Relatório final: o que foi configurado nesse projeto; se "novo", URL do repo criado e se o humano já confirmou o `push`; se "existente", o resultado do "Recriar o ambiente" — origem/layout detectados, o que foi aprovado/aplicado, o que ficou pendente, a spec de adequação + URL da issue, e o roteiro de dados antigos se houver; **onde acessar cada coisa criada** (URL do admin console, porta, usuário — nunca senha em texto) — não só "criei X", mas "acesse em Y pra ver/configurar"; onde cada credencial nova ficou; comando de teste por item.
 
 ### Relatório em arquivo
 
@@ -215,10 +194,12 @@ Todo relatório final da Etapa 2 (item 9 acima) também é escrito/atualizado em
 
 | Serviço | URL | Usuário | Onde achar a senha |
 |---|---|---|---|
-| Postgres | `localhost:5432` (pgAdmin: `http://localhost:15432`, se perfil completo) | `<usuário>` | `ai-infra/container/.env`, campo `POSTGRES_PASSWORD` |
-| Keycloak | `http://localhost:8080` | `<usuário>` | `ai-infra/container/.env`, campo `KEYCLOAK_ADMIN_PASSWORD` |
-| RabbitMQ | `http://localhost:15672` | `<usuário>` | `ai-infra/container/.env` |
-| Redis | sem UI — testar via `redis-cli` | ACL user `<projeto>` | gerada nesta rodada — <onde ficou guardada, nunca o valor> |
+| Postgres | `localhost:5432`, banco `<projeto>` (pgAdmin `http://localhost:15432`, grupo `<projeto>`) | `<projeto>_owner` / `<projeto>_app` | `ai-infra/container/.env`, `PROJECT_<P>_PG_OWNER_PASSWORD` / `_PG_APP_PASSWORD` |
+| Keycloak | `http://localhost:8080`, realm `<projeto>`, client `<projeto>-api`, usuário de teste `dev` | — | `.env`, `PROJECT_<P>_KEYCLOAK_CLIENT_SECRET` / `_KEYCLOAK_DEV_PASSWORD` |
+| RabbitMQ | `localhost:5672`, vhost `<projeto>` (UI `http://localhost:15672` com o admin) | `<projeto>` | `.env`, `PROJECT_<P>_RABBITMQ_PASSWORD` |
+| Redis | `localhost:6379`, prefixo `<projeto>:` | ACL user `<projeto>` | `.env`, `PROJECT_<P>_REDIS_PASSWORD` |
+
+(Tudo isso também está pronto pro app em `ai-infra/container/generated/projects/<projeto>.secrets.json`.)
 
 (Ajustar linhas conforme o que esse projeto realmente usa — não copiar as 4 se só provisionou uma.)
 
