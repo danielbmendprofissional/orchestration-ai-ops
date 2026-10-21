@@ -230,7 +230,7 @@ Sem comando solto (era aqui que o RabbitMQ dava permissão pro `guest`, que nem 
 2. Aplicar e conferir:
 
    ```powershell
-   cd ai-infraconfigsinfra
+   cd ai-infra\configs\infra
    node infra-config.mjs diff     # o que vai ser criado
    node infra-config.mjs apply
    node infra-config.mjs verify   # "✔ tudo conferido"
@@ -239,8 +239,10 @@ Sem comando solto (era aqui que o RabbitMQ dava permissão pro `guest`, que nem 
 3. Carregar no projeto (dev .NET):
 
    ```powershell
-   Get-Content ai-infracontainergeneratedprojects<projeto>.secrets.json | dotnet user-secrets set --project <csproj da API>
+   node infra-config.mjs secrets <projeto> --csproj=<csproj da API>
    ```
+
+   (Não usar `Get-Content ... | dotnet user-secrets set`: no PowerShell 5.1 o pipe põe BOM e o `dotnet` recusa o JSON.)
 
 Senhas do projeto: geradas pelo script em `ai-infra/container/.env` (`PROJECT_<PROJETO>_*`). Normalmente quem faz isso é o agent `local-environment-config` (`COMO-CRIAR-UM-PROJETO.md`, passo 3).
 

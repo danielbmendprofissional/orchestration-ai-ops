@@ -114,7 +114,7 @@ claude
 Pedir: *"configura o projeto em `<caminho completo do workspace>`"*. Ele lê o projeto (ADRs, `CONTEXT-MAP.md`) pra saber o que ele usa (ex. Esteira: Postgres, RabbitMQ, Redis, Keycloak com callback `http://localhost:4200/api/v1/auth/callback`, `/metrics` na 5105), propõe a entrada do manifesto, e depois de aprovado roda `apply` + `verify` e carrega as credenciais no user-secrets da API:
 
 ```powershell
-Get-Content ai-infra\container\generated\projects\<projeto>.secrets.json | dotnet user-secrets set --project <csproj da API>
+node ai-infra\configs\infra\infra-config.mjs secrets <projeto> --csproj=<csproj da API>
 ```
 
 Ele devolve um **plano** → você aprova → ele executa → relatório com onde ficou cada credencial (nunca o valor; as senhas são geradas pelo script em `ai-infra/container/.env`, `PROJECT_<PROJETO>_*`). Sempre abrir o `claude` **dentro da pasta do agent**, nunca dentro do projeto (`ai-ops/agents/infra/local-environment-config/README.md`).

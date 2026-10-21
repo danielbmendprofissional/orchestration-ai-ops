@@ -33,10 +33,10 @@ Senhas do projeto: geradas pelo `apply` no `ai-infra/container/.env` (`PROJECT_<
 O app lê as chaves do contrato (`docs/agents/infra-local.md` do projeto), que o `apply` gravou em `ai-infra/container/generated/projects/<projeto>.secrets.json`. Em dev, .NET via user-secrets — **agent executa** se o `.csproj` da API já existe:
 
 ```powershell
-Get-Content <ai-infra>\container\generated\projects\<projeto>.secrets.json | dotnet user-secrets set --project <csproj da API>
+node infra-config.mjs secrets <projeto> --csproj=<caminho completo do csproj da API>
 ```
 
-(O `.csproj` precisa de `UserSecretsId`; sem ele, `dotnet user-secrets init --project <csproj>` antes.)
+Grava direto no `secrets.json` do user-secrets (mescla, sem BOM, nunca imprime valor). **Nunca** `Get-Content ... | dotnet user-secrets set`: no PowerShell 5.1 o pipe põe BOM e o `dotnet` recusa o JSON. Sem `<UserSecretsId>` no csproj, o comando para e pede `dotnet user-secrets init --project <csproj>` — isso muda o csproj (arquivo do projeto): item com confirmação nominal. Verificar: `dotnet user-secrets list --project <csproj>` mostra as chaves do contrato (conferir só os nomes, nunca imprimir valores no relatório).
 
 **Projeto "existente" com config apontando pra outra coisa** (superusuário do Postgres, `guest` do RabbitMQ, vhost `/`, Redis sem usuário, connection string em `appsettings.Development.json` versionado, nome de chave fora do contrato): candidato a "Modificar" — confirmação nominal item por item, nunca sobrescrever sozinho. É mudança de código/config do projeto; se precisar renomear chave lida pelo código, vira pendência pro humano/Claude Code, não deste agent.
 
