@@ -212,14 +212,22 @@ No Claude Code:
 
 ## 9. Spec — `/to-spec`
 
-O `/to-spec` não entrevista, só sintetiza o que está na sessão. Fatia com decisão em aberto: grill curto antes, na mesma sessão. Fatia já toda decidida em ADR: `/to-spec <fatia> — decisões em docs/adr/NNNN` direto, sem grill.
+Você não precisa montar o prompt: o `CLAUDE.md` do workspace manda o `/to-spec` seguir `docs/agents/spec-format.md`, que faz o trabalho de pesquisa sozinho — acha a fatia no `specs/README.md`, confere o gate com `git` (dependências mergeadas em `dev`), lê as ADRs que tratam do assunto, os padrões do ai-base e o código atual dos repositórios tocados, e **só pergunta o que nenhum desses responde**. Fatia toda decidida em ADR sai sem pergunta nenhuma; fatia com lacuna vira um grill curto ali mesmo.
+
+Na raiz do workspace, sessão nova:
 
 ```
-/grill-with-docs Quero a fatia <nome>: <o que entrega>. Leia antes: CONTEXT-MAP.md, docs/adr/, specs/README.md.
-/to-spec
+/to-spec                 # a próxima fatia desbloqueada do mapa
+/to-spec B1 B2           # fatias específicas (um arquivo + uma issue-mãe por fatia)
+/to-spec A1 — o aprovador de negócio não precisa de conta no GitLab
+                         # o que vier depois do travessão é contexto seu que não está em lugar nenhum
 ```
 
-Formato, gate e issue-mãe: `ai-base/docs/agents/spec-format.md` (o `CLAUDE.md` do workspace manda o `/to-spec` seguir esse arquivo no lugar do template dele). Em resumo: arquivo `specs/feature/<área>/NN-nome.md` como fonte de verdade, `## Contexto necessário` no topo, Ideia · Dados · Backend · Frontend · Infra · Testes ("N/A" no que não se aplica), critérios em EARS, issue-mãe só com link + resumo. Se a fatia anterior não estiver mergeada em `dev`, ele avisa e para.
+O que esperar, em ordem: qual fatia ele achou e por quê → gate (ok, ou o que falta e para) → as perguntas abertas, uma por vez, com recomendação (ou "nenhuma") → o arquivo escrito + resumo da Ideia e dos critérios pra você aprovar → só então a issue-mãe e o link no mapa.
+
+`/grill-with-docs` antes do `/to-spec` só quando a fatia ainda é ideia solta (não está no mapa, ou a linha dela é uma frase vaga) — aí o grill decide o escopo e o `/to-spec` vem na mesma sessão.
+
+Formato: arquivo `specs/feature/<área>/NN-nome.md` como fonte de verdade, `## Contexto necessário` no topo, Ideia · Dados · Backend · Frontend · Infra · Testes ("N/A" no que não se aplica), critérios em EARS (checklist em fatia de fundação/limpeza), issue-mãe só com link + resumo.
 
 Fatia = entrega fina **ponta a ponta**, nunca "só o backend". Exceção: fatias de infra/bootstrap (sem EARS de domínio, viram checklist).
 
@@ -317,7 +325,7 @@ Só o **mapa** nasce inteiro. Spec, tickets e testes nascem na hora em que vão 
 ```
  ┌─ 1. Discovery         /grill-with-docs              Claude Code ─┐
  │  2. Arquitetura       ADR (se for decisão transversal)            │  você responde
- │  3. Spec              /to-spec                                    │
+ │  3. Spec              /to-spec <fatia>                            │
  │     ✋ VOCÊ: lê cada EARS e aprova                                ─┘
  │  4. Tickets           /to-tickets  → issues no GitLab
  │     ✋ VOCÊ: confere dependências e o "ready-for-agent"
@@ -342,14 +350,15 @@ cd <workspace>; claude
 ```
 
 ```
-/grill-with-docs Quero a fatia <nome>: <o que entrega, 2-3 frases>.
-Leia antes: CONTEXT-MAP.md, docs/adr/, specs/README.md e <referências da fatia>.
+/to-spec <ID da fatia>
 ```
+
+Ele pesquisa sozinho e pergunta só o que falta (passo 9). Fatia que ainda é ideia solta, fora do mapa: `/grill-with-docs Quero a fatia <nome>: <o que entrega, 2-3 frases>.` primeiro, `/to-spec` na mesma sessão.
 
 - Ele pergunta uma coisa por vez. "Não sei, recomende" é resposta válida; a recomendação dele passa a ser decisão só quando você aceita.
 - Decisão que vale pra mais de uma fatia → peça "registra isso como ADR". Decisão só da fatia fica na spec.
 - Questão de arquitetura de código (camadas, onde algo mora) → `/codebase-design` ou `/improve-codebase-architecture`.
-- Fechou o discovery → `/to-spec`. Ele grava `specs/feature/<área>/NN-nome.md` e abre a issue-mãe.
+- Você aprova o resumo → ele grava `specs/feature/<área>/NN-nome.md`, abre a issue-mãe e linka no mapa.
 
 **Como validar a spec:** cada EARS tem que ser testável ("QUANDO a lista carrega sem fluxos, O SISTEMA DEVE mostrar o estado vazio"). EARS vago ("deve ser bonito") volta pro grill. O `## Contexto necessário` precisa listar tudo o que o executor tem que ler, inclusive referências visuais. Aprovou a spec, ela vira o contrato dos testes.
 
