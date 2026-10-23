@@ -157,10 +157,10 @@ O `/grill-with-docs` não segue pauta sozinho: a árvore de decisões cresce a p
 /grill-with-docs <o que é o projeto, 2-3 frases>.
 Pauta obrigatória — não encerre com nenhum item em aberto:
 1. Domínio: termos, regras, o que fica de fora → CONTEXT-MAP.md (nunca GLOSSARY.md)
-2. Arquitetura e padrões: stack, camadas, contrato de API, autenticação, padrões de código → ADRs
+2. Arquitetura e padrões: confirmar docs/agents/padrao-frontend.md e padrao-api.md; ADR só pro que diverge ou é do domínio
 3. Direção de design: referências e tom → docs/referencias/visual/
 4. Mapa de fatias: ordem e dependências → specs/README.md
-Leia antes: CONTEXT-MAP.md, docs/adr/, docs/referencias/.
+Leia antes: CONTEXT-MAP.md, docs/adr/, docs/agents/padrao-*.md, docs/referencias/
 ```
 
 Pra uma fatia específica depois do discovery do projeto, o grill é curto e só sobre o que está aberto nela (Parte 2).
@@ -169,8 +169,8 @@ O Claude entrevista você (uma pergunta por vez) até fechar as lacunas: regras,
 
 O discovery do projeto fecha **decisões**, não código:
 - **Domínio:** termos, regras e o que fica de fora → `CONTEXT-MAP.md`.
-- **Arquitetura e padrões:** stack, camadas, contrato de API (paginação, erros), autenticação, padrões de código (smart/dumb, nomenclatura) → ADRs (passo 6).
-- **Direção de design:** referências visuais e o tom (ex.: "maduro, nível GitLab") → `docs/referencias/visual/`. Os tokens e o tema em si nascem no passo 8.
+- **Arquitetura e padrões:** stack, camadas, contrato de API (paginação, erros), autenticação e padrões de código já vêm prontos em `docs/agents/padrao-frontend.md` e `padrao-api.md` — o discovery só confirma. ADR (passo 6) é pro que diverge desses padrões e pras decisões do domínio.
+- **Direção de design:** referências visuais e o tom (ex.: "maduro, nível GitLab") → `docs/referencias/visual/` (local, fora do git: material de terceiros). Os tokens e o tema em si nascem no passo 8.
 - **Mapa de fatias:** a ordem e as dependências → `specs/README.md`.
 
 - Trabalho grande demais pra uma sessão → `/wayfinder` antes (mapa + tickets filhos).
@@ -186,12 +186,12 @@ Toda decisão que vale além de uma fatia (padrão de API, autenticação, stack
 
 ## 7. Bootstrap dos repositórios de código
 
-Feito pelo **Claude Code** (não pelo `pi`), direto a partir das ADRs, **sem spec formal nem tickets**: é fundação, não tem regra de negócio pra virar EARS. O "pronto quando" abaixo é o checklist. Vem antes do design system porque o tema é código (preset PrimeNG, `@theme` Tailwind) e o `impeccable` valida contra o app rodando.
+Feito pelo **Claude Code** (não pelo `pi`), direto de `docs/agents/padrao-frontend.md`/`padrao-api.md` + ADRs do projeto, **sem spec formal nem tickets**: é fundação, não tem regra de negócio pra virar EARS. O "pronto quando" abaixo é o checklist. Vem antes do design system porque o tema é código (`@theme` do Tailwind + variáveis do helm do spartan no `src/styles.css`) e o `impeccable` valida contra o app rodando.
 
-- **Frontend:** `ng new` na versão estável, PrimeNG + Tailwind, runner de teste, estrutura de pastas da ADR de stack, `nginx/` copiado de `template-ci/examples/angular/nginx`, `.gitlab-ci.yml` copiado de `ai-base/templates/frontend.gitlab-ci.yml` (`ANGULAR_DIST_PATH`, `TEST_COMMAND`), `public/config.json` de dev, `package-lock.json` commitado, `<projeto>-frontend/CLAUDE.md` com a stack.
+- **Frontend:** `ng new` na versão estável, Tailwind 4 + spartan/ui (`@spartan-ng/cli:init`, helm em `src/app/shared/ui`), Vitest + Playwright + axe, estrutura de `padrao-frontend.md`, `core/config` lendo `/config.json`, `proxy.conf.json` de `/api`, `nginx/` copiado de `template-ci/examples/angular/nginx`, `.gitlab-ci.yml` copiado de `ai-base/templates/frontend.gitlab-ci.yml` (`ANGULAR_DIST_PATH`, `TEST_COMMAND`), `public/config.json` de dev, `package-lock.json` commitado, `<projeto>-frontend/CLAUDE.md` com a stack.
 - **API:** `.gitlab-ci.yml` de `ai-base/templates/api.gitlab-ci.yml`, `/health`, `/metrics`, log JSON + OTLP (`ai-base/docs/agents/observabilidade-backup.md`), configuração só pelas chaves do contrato (`ai-base/docs/agents/infra-local.md`, via user-secrets em dev), porta do `/metrics` no campo `metrics` do projeto em `ai-infra/configs/infra/projects.json`.
 
-**Pronto quando:** `ng serve`/`dotnet run` sobem, `npm test` roda, estrutura bate com a ADR.
+**Pronto quando:** `ng serve`/`dotnet run` sobem, `npm test` roda, estrutura bate com a ADR, e a branch está **mergeada em `dev`** (o fechamento de fatia de `ai-base/docs/workflow.md` vale aqui também).
 
 ## 8. Design system
 
@@ -205,24 +205,21 @@ npx impeccable install
 No Claude Code:
 1. `ui-ux-pro-max` → direção de design (perfil `dashboard`/`app-component` pra sistema interno).
 2. `/impeccable init` → gera `DESIGN.md`/`PRODUCT.md`, usando `docs/design/tokens.md` como semente.
-3. Mapear os tokens pro **preset do PrimeNG** e pro `@theme` do Tailwind, mesmos valores dos dois lados. Tema de fábrica (Aura/Lara, paleta default do Tailwind) é P0.
+3. Mapear os tokens no `src/styles.css`: `@theme` do Tailwind e, no `:root`, as variáveis do helm do spartan (`--primary`, `--background`…) apontando pros mesmos valores. Tema de fábrica (spartan `stone`/`zinc`, paleta default do Tailwind) é P0.
 4. Referências visuais: `docs/design/referencias.md` (Aceternity, 21st.dev, bklit — só inspiração, reimplementa em Angular; `interfaces.rauno.me` como checklist).
 
-**Pronto quando:** uma página de amostra (botões, tabela, formulário, badges de status, estados vazio/erro) sai com a cara do projeto e **você aprovou**. Daí em diante toda spec com tela cita o `DESIGN.md` em vez de repetir decisão visual.
+**Pronto quando:** uma página de amostra (botões, tabela, formulário, badges de status, estados vazio/erro) sai com a cara do projeto, **você aprovou**, a branch está **mergeada em `dev`** e o `<projeto>-frontend/CLAUDE.md` aponta pro `DESIGN.md`. Daí em diante toda spec com tela cita o `DESIGN.md` em vez de repetir decisão visual.
 
 ## 9. Spec — `/to-spec`
 
+O `/to-spec` não entrevista, só sintetiza o que está na sessão. Fatia com decisão em aberto: grill curto antes, na mesma sessão. Fatia já toda decidida em ADR: `/to-spec <fatia> — decisões em docs/adr/NNNN` direto, sem grill.
+
 ```
+/grill-with-docs Quero a fatia <nome>: <o que entrega>. Leia antes: CONTEXT-MAP.md, docs/adr/, specs/README.md.
 /to-spec
 ```
 
-Transforma a conversa do discovery numa spec formal. Formato (o mesmo do Valuto):
-
-- arquivo `specs/feature/<área>/NN-nome.md` — **fonte de verdade**;
-- topo: `## Contexto necessário` listando cada `.md` que o executor precisa ler (o `pi` não empilha `CLAUDE.md` sozinho);
-- seções: Ideia · Dados · Backend · Frontend · Infra · Testes — o que não se aplica fica escrito "N/A";
-- critérios de aceite em **EARS** ("QUANDO X, O SISTEMA DEVE Y");
-- issue-mãe no `<projeto>-workspace` apontando pro arquivo (link + resumo, não o conteúdo).
+Formato, gate e issue-mãe: `ai-base/docs/agents/spec-format.md` (o `CLAUDE.md` do workspace manda o `/to-spec` seguir esse arquivo no lugar do template dele). Em resumo: arquivo `specs/feature/<área>/NN-nome.md` como fonte de verdade, `## Contexto necessário` no topo, Ideia · Dados · Backend · Frontend · Infra · Testes ("N/A" no que não se aplica), critérios em EARS, issue-mãe só com link + resumo. Se a fatia anterior não estiver mergeada em `dev`, ele avisa e para.
 
 Fatia = entrega fina **ponta a ponta**, nunca "só o backend". Exceção: fatias de infra/bootstrap (sem EARS de domínio, viram checklist).
 
@@ -407,7 +404,7 @@ Com o app rodando, no Claude Code:
 - `critique` = avaliação de UX/hierarquia; `audit` = acessibilidade, contraste, estados. Correções: `/impeccable adapt|harden|polish|layout|typeset`.
 - `/skill:avoid-ai-design detect` como rede de segurança contra cara de "template de IA".
 - Compare com as referências do projeto (`docs/referencias/`, `docs/design/referencias.md`). Referência é inspiração: nunca copiar pacote React.
-- Aprovado o visual, o que for padrão (cor, espaçamento, componente) sobe pro `DESIGN.md`/preset, nunca fica só na tela.
+- Aprovado o visual, o que for padrão (cor, espaçamento, componente) sobe pro `DESIGN.md`/`src/styles.css`, nunca fica só na tela.
 
 ### 9. Review (Claude Code, sessão interativa)
 
@@ -450,8 +447,8 @@ Ordem:
 
 | # | Fatia | Quem | O que você testa nela |
 |---|---|---|---|
-| 1 | **F0 — Bootstrap do frontend** (fundação, passo 7) | Claude Code | sem spec: direto das ADRs; Claude faz `ng new` (Angular 22, zoneless, Vitest, PrimeNG, Tailwind, estrutura da ADR-0005, `public/config.json`, `proxy.conf.json` pra `/api`, `esteira-frontend/CLAUDE.md`) |
-| 2 | **D0 — Design system** (fundação, passo 8) | Claude Code + `impeccable` | `/impeccable init` com a direção de `docs/referencias/visual/` (maduro, nível GitLab; as telas do TCE são só referência funcional); preset PrimeNG + `@theme` Tailwind com os mesmos tokens; uma página de amostra pra você aprovar |
+| 1 | **F0 — Bootstrap do frontend** (fundação, passo 7) | Claude Code | sem spec: direto das ADRs; Claude faz `ng new` (Angular 22, zoneless, Vitest, spartan/ui, Tailwind 4, estrutura da ADR-0005, `public/config.json`, `proxy.conf.json` pra `/api`, `esteira-frontend/CLAUDE.md`) |
+| 2 | **D0 — Design system** (fundação, passo 8) | Claude Code + `impeccable` | `/impeccable init` com a direção de `docs/referencias/visual/` (maduro, nível GitLab; as telas do TCE são só referência funcional); tokens no `src/styles.css` (`@theme` + variáveis do spartan); uma página de amostra pra você aprovar |
 | 3 | **F0.5 — Shell + sessão** | `pi` (`front`, `ui`, `tests`, `security`, `review`) | **primeira orquestração**: layout (sidebar + header da tela 01), `auth.service`, guards, interceptors de sessão e erro |
 | 4 | **F1 — Lista e criação de fluxo** | `pi` | spec com EARS de domínio; smart/dumb; tabela paginada (ADR-0002) |
 | 5 | **F2 — Detalhe + steps-bar + rotas por etapa** | `pi` | componente dumb puro, serviço com escopo de rota |
@@ -476,14 +473,16 @@ Depois, na mesma sessão, o design system (passo 8) e a página de amostra para 
 
 ---
 
-## Onde a Esteira está (2026-10-21)
+## Onde a Esteira está (2026-10-23)
 
 | Passo | Estado |
 |---|---|
 | 0 | ok (infra, `pi`, OmniRoute, `glab`) |
 | 1 | ok — `esteira-workspace`, `esteira-api`, `esteira-frontend` no grupo `orchestration-ai/ai-pipeline/esteira` |
 | 2 | ok — workspace em `ai-pipeline/esteira/`, publicado em `main` (remote HTTPS) |
-| 3 | infra criada (manifesto, `verify` verde): banco `esteira` (`esteira_owner`/`esteira_app`), vhost `esteira`, Redis `esteira:*`, realm `esteira` + client `esteira-api` + usuário `dev`, `/metrics` na 5105. **Falta no código:** `appsettings.Development.json` ainda usa `postgres`/`guest` e senha versionada — trocar pelas chaves do contrato via user-secrets |
+| 3 | infra criada (manifesto, `verify` verde): banco `esteira` (`esteira_owner`/`esteira_app`), vhost `esteira`, Redis `esteira:*`, realm `esteira` + client `esteira-api` + usuário `dev`, `/metrics` na 5105. Código adequado ao contrato na fatia 00 (mergeada em `dev` da `esteira-api`) |
 | 4 | ok — skills instaladas no workspace (`.claude/skills`, `impeccable` em `.pi/skills`); MCP do GitLab conectado |
-| 6 | ADRs 0001–0007 escritas; referências do TCE em `docs/referencias/tce-fluxo-deploy/` |
-| Parte 3 | **próximo:** fundação (F0 bootstrap → D0 design system) pelo Claude Code; specs de B1–B2 da API em paralelo |
+| 6 | ADRs 0001–0016 (0015: spartan/ui no lugar do PrimeNG); referências do TCE em `docs/referencias/tce-fluxo-deploy/` |
+| 7 | F0 (frontend) mergeada em `dev`; M0 (API) mergeada em `dev` |
+| 8 | D0 feito (`DESIGN.md`, `PRODUCT.md`, tokens no `styles.css`, protótipos em `docs/design/prototipos/`). **Falta:** mergear `feature/d0-tema` (frontend) em `dev` e `docs/d0-prototipos` (workspace) em `main` |
+| 9+ | **próximo:** grill + spec de B1 e B2 juntas (API, só dependem da M0) → B3 → F0.5 |
