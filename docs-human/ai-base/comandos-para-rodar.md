@@ -188,19 +188,24 @@ Depois, dentro de uma sessão do Claude Code aberta naquele projeto:
 
 E os comandos de correção conforme o `audit` indicar: `/impeccable adapt`, `/impeccable harden`, `/impeccable polish`.
 
-**PrimeNG** (biblioteca de componentes Angular default — também por projeto, não aqui):
-
-```powershell
-npm install primeng @primeng/themes
-```
-
-**Tailwind CSS** (default junto com o PrimeNG, pra layout/espaçamento/utilitário — Angular 20+ tem suporte oficial):
+**Tailwind CSS 4** (base do spartan/ui e do layout — Angular 20+ tem suporte oficial; também por projeto, não aqui):
 
 ```powershell
 ng add tailwindcss
 ```
 
 Se o `ng add` não existir ainda na versão do CLI do projeto, o caminho manual é `npm install tailwindcss @tailwindcss/postcss postcss` seguido da configuração descrita em `angular.dev/guide/tailwind` — mas tenta o `ng add` primeiro.
+
+**spartan/ui** (biblioteca de componentes Angular default — o PrimeNG 22 deixou de ser MIT):
+
+```powershell
+npm install @spartan-ng/brain
+npm install -D @spartan-ng/cli
+npx ng g @spartan-ng/cli:init
+npx ng g @spartan-ng/cli:ui button   # um por componente; o helm vai pra src/app/shared/ui
+```
+
+O `init` cria o `components.json` (caminho `src/app/shared/ui`, alias `@spartan-ng/helm`). Depois, mapear os tokens no `src/styles.css` (`@theme` + variáveis do helm no `:root`) — ver `docs/design/component-library.md`.
 
 ## 10. Playwright (E2E/smoke test do agente `qa`) — via Docker
 

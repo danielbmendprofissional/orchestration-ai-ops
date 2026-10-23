@@ -1,12 +1,14 @@
 # UI/UX — processo e ferramentas (humano)
 
-## Por que PrimeNG (não outra lib Angular)
+## Por que spartan/ui (não outra lib Angular)
 
-É a biblioteca Angular-nativa mais madura (não é port de algo React), cobre o catálogo inteiro que uma tela enterprise/dashboard pede (tabela com filtro/paginação/export, formulário completo, overlay, chart) e tem tema customizável via PrimeNG Themes / Ultima Design Tokens — dá pra mapear `tokens.md` direto pro tema em vez de reescrever CSS componente por componente.
+O default era o PrimeNG, mas a partir da versão 22 ele passou pra licença comercial (PrimeUI License, com chave; a Community gratuita exige organização pequena e renova todo ano), e o PrimeNG 21, último MIT, só aceita Angular 21. O spartan/ui é MIT e Angular-nativo, no modelo do shadcn: as primitivas acessíveis (`@spartan-ng/brain`, sobre o Angular CDK) vêm do npm e o estilo (helm) é copiado pro repositório — o código do componente é nosso, então tirar o visual de fábrica é editar o arquivo, não brigar com um tema fechado. Angular Material ficou de fora porque o visual Material é marcado e caro de descaracterizar.
 
-## Por que Tailwind junto do PrimeNG
+Custo: menos componentes prontos que o PrimeNG (a tabela de dados é o helm de table sobre TanStack Table e o gráfico é o helm `chart` sobre TanStack Charts).
 
-Angular tem suporte oficial a Tailwind desde a v20 (`angular.dev/guide/tailwind`) — não é gambiarra, é caminho suportado pelo próprio framework.
+## Por que Tailwind junto do spartan
+
+O helm do spartan é estilizado com Tailwind, e o Angular tem suporte oficial a Tailwind desde a v20 (`angular.dev/guide/tailwind`). Tokens numa fonte só, `src/styles.css`: o `@theme` alimenta os utilitários e o `:root` traduz pras variáveis do helm.
 
 ## Por que shadcn/ui (não Material UI/Chakra UI) no caso React
 
@@ -24,9 +26,9 @@ Você já paga por Claude Code/Claude.ai, Deepseek V4 Flash, GPT-5.6 Luna e Goog
 
 - Todas as skills do Matt Pocock + `avoid-ai-design`.
 - **Skill de Design do Claude Code** (canvas de artboards editável): desenhar wireframe/mockup antes de virar código Angular — substitui o papel que o Figma free-tier faria, sem sair do Claude Code e sem limite de arquivo.
-- **Skill de Dataviz do Claude Code**: decidir paleta/formato/tipo de gráfico antes de implementar em PrimeNG Charts.
+- **Skill de Dataviz do Claude Code**: decidir paleta/formato/tipo de gráfico antes de implementar com o helm `chart` do spartan.
 - Deepseek V4 Flash / GPT-5.6 Luna via pi.dev.
-- PrimeNG, skills oficiais do Angular, anime.js, Motion (API vanilla) — open-source, zero custo.
+- spartan/ui, Tailwind, skills oficiais do Angular, anime.js, Motion (API vanilla) — open-source, zero custo.
 - `interfaces.rauno.me` — checklist gratuito.
 
 ### Camada 1 — Google AI Plus, já pago, dentro da cota mensal
@@ -67,7 +69,7 @@ Nem tudo que aparece listado por aí como "incluído no Plus" é confiável — 
 | Direção de paleta/tipografia/estilo pra uma tela nova | `ui-ux-pro-max-skill` (Camada 2) |
 | Auditoria de ai-slop no app rodando | `impeccable.style` (Camada 2), com `avoid-ai-design` (Camada 0) como rede rápida no `/code-review` |
 | Padrão de interação validado empiricamente | `interfaces.rauno.me` / `lazyweb.com` (Camada 0/2) |
-| Gráfico/dashboard | Skill de Dataviz do Claude Code (Camada 0) pra definir, PrimeNG Charts (Camada 0) pra implementar |
+| Gráfico/dashboard | Skill de Dataviz do Claude Code (Camada 0) pra definir, helm `chart` do spartan (Camada 0) pra implementar |
 | Discussão de tela com alguém não-técnico | Claude Design (Camada 0) primeiro; Figma free só se a pessoa já preferir Figma |
 
 Regra geral fora da tabela: Camada 0 > Camada 1 > Camada 2 > Camada 3, a não ser que a ferramenta de uma camada mais cara resolva algo que nenhuma das anteriores resolve de verdade.

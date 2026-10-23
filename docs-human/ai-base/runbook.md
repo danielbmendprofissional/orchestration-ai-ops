@@ -49,8 +49,8 @@ Autenticar `glab` no runner se ainda não tiver feito (passo 5 de `comandos-para
 Antes da primeira task com fatia de UI — o `tokens.md` do template (`docs/design/tokens.md`) é só um seed, não a fonte de verdade final:
 
 1. Rodar a cadeia descrita em `docs/design/principios.md`: `ui-ux-pro-max-skill` pra direção inicial, depois `/impeccable init` pra gerar o `DESIGN.md`/`PRODUCT.md` reais do projeto, usando os valores de `docs/design/tokens.md` como seed consciente em vez de deixar a ferramenta partir do zero.
-2. Mapear os valores pro preset de tema do PrimeNG (`definePreset`, `@primeng/themes`) **e** pro `tailwind.config` do projeto, com os mesmos números dos dois lados (ver `docs/design/component-library.md`).
-3. Registrar no `CONTEXT.md` do projeto que os tokens vivem no `DESIGN.md`/preset dali pra frente — `docs/design/tokens.md` do template deixa de ser a fonte de verdade assim que isso acontecer.
+2. Mapear os valores pro `src/styles.css` do projeto: `@theme` do Tailwind 4 (utilitários) e, no mesmo arquivo, as variáveis do helm do spartan (`--primary`, `--background`…) no `:root` apontando pros mesmos tokens (ver `docs/design/component-library.md`).
+3. Registrar no `CONTEXT.md` do projeto que os tokens vivem no `DESIGN.md`/`src/styles.css` dali pra frente — `docs/design/tokens.md` do template deixa de ser a fonte de verdade assim que isso acontecer.
 
 ## 9. Primeiro ciclo de desenvolvimento (local, sem nuvem)
 

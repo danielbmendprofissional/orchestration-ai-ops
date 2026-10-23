@@ -16,10 +16,11 @@ Exemplo usado: `<projeto>` = `esteira` (primeiro projeto criado seguindo este gu
 4. skills + MCP
 5. discovery  → /grill-with-docs           (Claude Code)
 6. decisões   → docs/adr/                  (Claude Code + você)
-7. spec       → /to-spec  → issue-mãe       (Claude Code)
-8. tickets    → /to-tickets → issues filhas (Claude Code)
-9. bootstrap dos repositórios de código     (Claude Code)
-10. design system                           (Claude Code + skills de design)
+7. bootstrap dos repositórios de código     (Claude Code)               ┐ fundação: uma vez,
+8. design system                            (Claude Code + impeccable)  ┘ sem spec formal
+── daqui em diante, fatia a fatia ──
+9. spec       → /to-spec  → issue-mãe       (Claude Code)
+10. tickets   → /to-tickets → issues filhas (Claude Code)
 11. execução  → pi /implement-task          (pi.dev + OmniRoute, um painel do Alethe por spec)
 12. review    → /code-review → push → MR    (Claude Code, depois CI)
 13. esteira   → tag vX.Y.Z-rcN → qa → hml → main
@@ -29,7 +30,7 @@ Exemplo usado: `<projeto>` = `esteira` (primeiro projeto criado seguindo este gu
 
 - traz `docs/agents`, hooks e `.pi/agents` do `ai-base` atual, adaptados ao layout que o projeto já tem (monorepo continua monorepo — conversão pra workspace só se você pedir);
 - cria a casa do projeto na infra compartilhada (banco novo vazio — dado antigo não migra sozinho; o relatório traz o `pg_dump`/`pg_restore` se você quiser);
-- **não mexe em código**: o que o código precisa mudar (connection string fora do contrato, senha versionada, `/health`, `/metrics`, log) vira a spec `specs/feature/infra/00-adequacao-ambiente.md` + uma issue `needs-triage`, que segue o fluxo normal a partir do passo 8.
+- **não mexe em código**: o que o código precisa mudar (connection string fora do contrato, senha versionada, `/health`, `/metrics`, log) vira a spec `specs/feature/infra/00-adequacao-ambiente.md` + uma issue `needs-triage`, que segue o fluxo normal a partir do passo 10 (tickets).
 
 Rodar de novo depois é seguro: ele só aponta o que o template mudou desde a última recriação (guarda o sha do `ai-base` em `docs/agents/relatorio-ambiente.md`).
 
@@ -85,7 +86,7 @@ Ajustar no workspace:
 - `README.md` — o que é o projeto e o mapa dos repositórios (o do `ai-base` é genérico).
 - `CONTEXT-MAP.md` — componentes, como conversam, linguagem do domínio.
 - `.mcp.json` — já vem com o bloco do GitLab (`disabled: true`, usa `GITLAB_PERSONAL_ACCESS_TOKEN`).
-- `CLAUDE.md` — **não editar**: é o processo do `ai-base`. Regra de stack de cada componente vai num `CLAUDE.md` dentro do repositório do componente (`<projeto>-frontend/CLAUDE.md`), criado no passo 9.
+- `CLAUDE.md` — **não editar**: é o processo do `ai-base`. Regra de stack de cada componente vai num `CLAUDE.md` dentro do repositório do componente (`<projeto>-frontend/CLAUDE.md`), criado no passo 7.
 
 ```powershell
 git add -A; git commit -m "chore: workspace a partir do ai-base"
@@ -135,7 +136,7 @@ npx skills add https://github.com/angular/skills    -s '*' -a claude-code -y   #
 # avoid-ai-design e skills de segurança: comandos-para-rodar.md, seções 8 e 13
 ```
 
-As de design (`ui-ux-pro-max`, `impeccable`) só depois que existir app Angular rodando (passo 10).
+As de design (`ui-ux-pro-max`, `impeccable`) só depois que existir app Angular rodando (passo 8).
 
 MCP do GitLab: no Claude Code, `/mcp` deve mostrar `gitlab` conectado. Se aparecer `CONNECTION_CLOSED`, quase sempre é o nome da variável — o servidor `@zereight/mcp-gitlab` só lê `GITLAB_PERSONAL_ACCESS_TOKEN` (não `GITLAB_TOKEN`). Fallback sem MCP: `glab` (`docs/agents/issue-tracker.md`).
 
@@ -150,16 +151,32 @@ cd <workspace>
 claude
 ```
 
+O `/grill-with-docs` não segue pauta sozinho: a árvore de decisões cresce a partir do que você fala. Por isso a abertura é fixa, com a pauta:
+
 ```
-/grill-with-docs <o que você quer construir, em 2-3 frases>
+/grill-with-docs <o que é o projeto, 2-3 frases>.
+Pauta obrigatória — não encerre com nenhum item em aberto:
+1. Domínio: termos, regras, o que fica de fora → CONTEXT-MAP.md (nunca GLOSSARY.md)
+2. Arquitetura e padrões: stack, camadas, contrato de API, autenticação, padrões de código → ADRs
+3. Direção de design: referências e tom → docs/referencias/visual/
+4. Mapa de fatias: ordem e dependências → specs/README.md
+Leia antes: CONTEXT-MAP.md, docs/adr/, docs/referencias/.
 ```
 
+Pra uma fatia específica depois do discovery do projeto, o grill é curto e só sobre o que está aberto nela (Parte 2).
+
 O Claude entrevista você (uma pergunta por vez) até fechar as lacunas: regras, termos do domínio, o que fica de fora. Termos vão pro `CONTEXT.md`/`CONTEXT-MAP.md`. Responda com o que você sabe; "não sei, recomende" é resposta válida.
+
+O discovery do projeto fecha **decisões**, não código:
+- **Domínio:** termos, regras e o que fica de fora → `CONTEXT-MAP.md`.
+- **Arquitetura e padrões:** stack, camadas, contrato de API (paginação, erros), autenticação, padrões de código (smart/dumb, nomenclatura) → ADRs (passo 6).
+- **Direção de design:** referências visuais e o tom (ex.: "maduro, nível GitLab") → `docs/referencias/visual/`. Os tokens e o tema em si nascem no passo 8.
+- **Mapa de fatias:** a ordem e as dependências → `specs/README.md`.
 
 - Trabalho grande demais pra uma sessão → `/wayfinder` antes (mapa + tickets filhos).
 - Dúvida de qual skill usar → `/ask-matt`.
 
-**Pronto quando:** não sobra pergunta aberta sobre o escopo da fatia.
+**Pronto quando:** não sobra pergunta aberta sobre arquitetura, padrões e direção de design, e o mapa de fatias existe.
 
 ## 6. Decisões — `docs/adr/`
 
@@ -167,7 +184,33 @@ Toda decisão que vale além de uma fatia (padrão de API, autenticação, stack
 
 **Pronto quando:** nenhuma spec precisa "decidir" algo transversal no meio do texto.
 
-## 7. Spec — `/to-spec`
+## 7. Bootstrap dos repositórios de código
+
+Feito pelo **Claude Code** (não pelo `pi`), direto a partir das ADRs, **sem spec formal nem tickets**: é fundação, não tem regra de negócio pra virar EARS. O "pronto quando" abaixo é o checklist. Vem antes do design system porque o tema é código (preset PrimeNG, `@theme` Tailwind) e o `impeccable` valida contra o app rodando.
+
+- **Frontend:** `ng new` na versão estável, PrimeNG + Tailwind, runner de teste, estrutura de pastas da ADR de stack, `nginx/` copiado de `template-ci/examples/angular/nginx`, `.gitlab-ci.yml` copiado de `ai-base/templates/frontend.gitlab-ci.yml` (`ANGULAR_DIST_PATH`, `TEST_COMMAND`), `public/config.json` de dev, `package-lock.json` commitado, `<projeto>-frontend/CLAUDE.md` com a stack.
+- **API:** `.gitlab-ci.yml` de `ai-base/templates/api.gitlab-ci.yml`, `/health`, `/metrics`, log JSON + OTLP (`ai-base/docs/agents/observabilidade-backup.md`), configuração só pelas chaves do contrato (`ai-base/docs/agents/infra-local.md`, via user-secrets em dev), porta do `/metrics` no campo `metrics` do projeto em `ai-infra/configs/infra/projects.json`.
+
+**Pronto quando:** `ng serve`/`dotnet run` sobem, `npm test` roda, estrutura bate com a ADR.
+
+## 8. Design system
+
+Logo depois do bootstrap, antes de qualquer spec com tela. Também **sem spec formal**: a direção veio do discovery e a validação é você aprovando a página de amostra. Na raiz do `<projeto>-frontend`, com `ng serve` rodando:
+
+```powershell
+npm install -g ui-ux-pro-max-cli; uipro init --ai claude
+npx impeccable install
+```
+
+No Claude Code:
+1. `ui-ux-pro-max` → direção de design (perfil `dashboard`/`app-component` pra sistema interno).
+2. `/impeccable init` → gera `DESIGN.md`/`PRODUCT.md`, usando `docs/design/tokens.md` como semente.
+3. Mapear os tokens pro **preset do PrimeNG** e pro `@theme` do Tailwind, mesmos valores dos dois lados. Tema de fábrica (Aura/Lara, paleta default do Tailwind) é P0.
+4. Referências visuais: `docs/design/referencias.md` (Aceternity, 21st.dev, bklit — só inspiração, reimplementa em Angular; `interfaces.rauno.me` como checklist).
+
+**Pronto quando:** uma página de amostra (botões, tabela, formulário, badges de status, estados vazio/erro) sai com a cara do projeto e **você aprovou**. Daí em diante toda spec com tela cita o `DESIGN.md` em vez de repetir decisão visual.
+
+## 9. Spec — `/to-spec`
 
 ```
 /to-spec
@@ -185,7 +228,7 @@ Fatia = entrega fina **ponta a ponta**, nunca "só o backend". Exceção: fatias
 
 **Pronto quando:** você leu a spec e concorda com cada EARS — ela vira o contrato dos testes.
 
-## 8. Tickets — `/to-tickets`
+## 10. Tickets — `/to-tickets`
 
 ```
 /to-tickets
@@ -194,32 +237,6 @@ Fatia = entrega fina **ponta a ponta**, nunca "só o backend". Exceção: fatias
 Quebra a spec em issues filhas (labels `backend`/`frontend` + `ready-for-agent`), cada uma declarando o que bloqueia e o que é bloqueado. Labels: `docs/agents/triage-labels.md`.
 
 **Pronto quando:** as issues estão no GitLab com dependências e a primeira está desbloqueada.
-
-## 9. Bootstrap dos repositórios de código
-
-Feito pelo **Claude Code** (não pelo `pi`): é decisão de infra — runner de teste, tema, estrutura, CI. Normalmente é a "Fatia 0" de cada componente.
-
-- **Frontend:** `ng new` na versão estável, PrimeNG + Tailwind, runner de teste, estrutura de pastas da ADR de stack, `nginx/` copiado de `template-ci/examples/angular/nginx`, `.gitlab-ci.yml` copiado de `ai-base/templates/frontend.gitlab-ci.yml` (`ANGULAR_DIST_PATH`, `TEST_COMMAND`), `public/config.json` de dev, `package-lock.json` commitado, `<projeto>-frontend/CLAUDE.md` com a stack.
-- **API:** `.gitlab-ci.yml` de `ai-base/templates/api.gitlab-ci.yml`, `/health`, `/metrics`, log JSON + OTLP (`ai-base/docs/agents/observabilidade-backup.md`), configuração só pelas chaves do contrato (`ai-base/docs/agents/infra-local.md`, via user-secrets em dev), porta do `/metrics` no campo `metrics` do projeto em `ai-infra/configs/infra/projects.json`.
-
-**Pronto quando:** `ng serve`/`dotnet run` sobem, `npm test` roda, estrutura bate com a ADR.
-
-## 10. Design system
-
-Antes da primeira fatia com tela. Na raiz do `<projeto>-frontend`, com `ng serve` rodando:
-
-```powershell
-npm install -g ui-ux-pro-max-cli; uipro init --ai claude
-npx impeccable install
-```
-
-No Claude Code:
-1. `ui-ux-pro-max` → direção de design (perfil `dashboard`/`app-component` pra sistema interno).
-2. `/impeccable init` → gera `DESIGN.md`/`PRODUCT.md`, usando `docs/design/tokens.md` como semente.
-3. Mapear os tokens pro **preset do PrimeNG** e pro `@theme` do Tailwind, mesmos valores dos dois lados. Tema de fábrica (Aura/Lara, paleta default do Tailwind) é P0.
-4. Referências visuais: `docs/design/referencias.md` (Aceternity, 21st.dev, bklit — só inspiração, reimplementa em Angular; `interfaces.rauno.me` como checklist).
-
-**Pronto quando:** uma tela de teste com `p-button`/`p-table` já sai com a cara do projeto.
 
 ## 11. Execução — `pi` + OmniRoute
 
@@ -282,6 +299,21 @@ Os passos 0–4 se fazem **uma vez por projeto**. Daqui pra frente, todo trabalh
 | **Subagents** | `data`, `backend`, `front`, `ui`, `tests`, `security`, `review`, cada um num combo do OmniRoute | chamados pelo `pi`, nunca por você |
 
 Regra prática: **se exige julgamento, é Claude Code; se é mecânico com contrato fechado, é `pi`**.
+
+## Quanto especificar de uma vez
+
+Só o **mapa** nasce inteiro. Spec, tickets e testes nascem na hora em que vão ser usados, uma fatia por vez. O que se aprende implementando uma fatia muda as seguintes. Spec escrita cedo demais é retrabalho e token gasto à toa.
+
+| O quê | Quando | Por quê |
+|---|---|---|
+| Mapa de fatias (`specs/README.md`), ADRs, `CONTEXT-MAP.md` | tudo, logo depois do discovery | barato (uma linha por fatia); dá ordem e dependências |
+| Spec detalhada (EARS) | só a próxima fatia, no máximo as duas seguintes | a fatia N muda a N+1 |
+| Tickets | só da spec recém-aprovada | dependem do código que já existe |
+| Testes | por ticket, durante a execução (vermelho primeiro, TDD) | os EARS já são o contrato; o teste é escrito contra o código real do momento |
+
+- Antes de especificar a próxima fatia, releia a linha dela no mapa e ajuste o que a anterior mudou.
+- Fatia entregue não se reescreve: a mudança vira fatia nova no mapa ou ADR nova ("Substitui ADR-000X").
+- Fatias sem dependência entre si podem ser especificadas juntas (ex.: B1 e B2 da Esteira).
 
 ## O ciclo (com os pontos onde você valida)
 
@@ -418,14 +450,14 @@ Ordem:
 
 | # | Fatia | Quem | O que você testa nela |
 |---|---|---|---|
-| 1 | **F0 — Bootstrap do frontend** | Claude Code | grill curto + spec de checklist; Claude faz `ng new` (Angular 22, zoneless, Vitest, PrimeNG, Tailwind, estrutura da ADR-0005, `public/config.json`, `proxy.conf.json` pra `/api`, `esteira-frontend/CLAUDE.md`) |
-| 2 | **D0 — Design system** | Claude Code + `impeccable` | `/impeccable init` com a direção de `docs/referencias/visual/` (maduro, nível GitLab; as telas do TCE são só referência funcional); preset PrimeNG + `@theme` Tailwind com os mesmos tokens; uma página de amostra pra você aprovar |
+| 1 | **F0 — Bootstrap do frontend** (fundação, passo 7) | Claude Code | sem spec: direto das ADRs; Claude faz `ng new` (Angular 22, zoneless, Vitest, PrimeNG, Tailwind, estrutura da ADR-0005, `public/config.json`, `proxy.conf.json` pra `/api`, `esteira-frontend/CLAUDE.md`) |
+| 2 | **D0 — Design system** (fundação, passo 8) | Claude Code + `impeccable` | `/impeccable init` com a direção de `docs/referencias/visual/` (maduro, nível GitLab; as telas do TCE são só referência funcional); preset PrimeNG + `@theme` Tailwind com os mesmos tokens; uma página de amostra pra você aprovar |
 | 3 | **F0.5 — Shell + sessão** | `pi` (`front`, `ui`, `tests`, `security`, `review`) | **primeira orquestração**: layout (sidebar + header da tela 01), `auth.service`, guards, interceptors de sessão e erro |
 | 4 | **F1 — Lista e criação de fluxo** | `pi` | spec com EARS de domínio; smart/dumb; tabela paginada (ADR-0002) |
 | 5 | **F2 — Detalhe + steps-bar + rotas por etapa** | `pi` | componente dumb puro, serviço com escopo de rota |
 | 6 | **F3 — Deploys, análises e modal de artefatos** | `pi` | densidade de dashboard, design das severidades |
 
-**Uma decisão pra levar ao grill da F0:** as fatias B1–B3 (paginação, erros, sessão BFF na `esteira-api`) ainda não existem. Pra não travar o frontend: (a) o front roda contra **fixtures/mock em dev** que já seguem o contrato das ADRs, e troca pra API real quando B1–B3 entrarem; ou (b) faz B1–B3 primeiro, em paralelo com F0/D0 (bom teste do subagent `backend`). Recomendação: **(b) em paralelo**, e mock só onde a API ainda não chegou.
+**Uma decisão de mapa (se o discovery não fechou):** as fatias B1–B3 (paginação, erros, sessão BFF na `esteira-api`) ainda não existem. Pra não travar o frontend: (a) o front roda contra **fixtures/mock em dev** que já seguem o contrato das ADRs, e troca pra API real quando B1–B3 entrarem; ou (b) faz B1–B3 primeiro, em paralelo com a fundação (bom teste do subagent `backend`). Recomendação: **(b) em paralelo**, e mock só onde a API ainda não chegou.
 
 **Primeiro comando:**
 
@@ -435,10 +467,12 @@ claude
 ```
 
 ```
-/grill-with-docs Fatia F0 — bootstrap do esteira-frontend (Angular), conforme ADR-0005 e ADR-0006.
-Leia antes: CONTEXT-MAP.md, docs/adr/, specs/README.md, docs/referencias/tce-fluxo-deploy/README.md.
-É uma fatia de infra: o resultado é uma spec-checklist em specs/feature/shell/00-bootstrap-frontend.md, no formato do Valuto.
+Faça o bootstrap do esteira-frontend (fundação, passo 7 do ai-ops/COMO-CRIAR-UM-PROJETO.md),
+direto das ADR-0005 e ADR-0006. Sem spec formal: o checklist é o "Pronto quando" do passo 7.
+Leia antes: CONTEXT-MAP.md, docs/adr/, docs/referencias/. Me mostre o plano antes de rodar o ng new.
 ```
+
+Depois, na mesma sessão, o design system (passo 8) e a página de amostra para você aprovar. Só então começam as specs: F0.5 primeiro (primeira orquestração pelo `pi`).
 
 ---
 
@@ -452,4 +486,4 @@ Leia antes: CONTEXT-MAP.md, docs/adr/, specs/README.md, docs/referencias/tce-flu
 | 3 | infra criada (manifesto, `verify` verde): banco `esteira` (`esteira_owner`/`esteira_app`), vhost `esteira`, Redis `esteira:*`, realm `esteira` + client `esteira-api` + usuário `dev`, `/metrics` na 5105. **Falta no código:** `appsettings.Development.json` ainda usa `postgres`/`guest` e senha versionada — trocar pelas chaves do contrato via user-secrets |
 | 4 | ok — skills instaladas no workspace (`.claude/skills`, `impeccable` em `.pi/skills`); MCP do GitLab conectado |
 | 6 | ADRs 0001–0007 escritas; referências do TCE em `docs/referencias/tce-fluxo-deploy/` |
-| Parte 3 | **próximo:** `/grill-with-docs` da F0 (comando no fim da Parte 3); B1–B3 da API em paralelo |
+| Parte 3 | **próximo:** fundação (F0 bootstrap → D0 design system) pelo Claude Code; specs de B1–B2 da API em paralelo |
