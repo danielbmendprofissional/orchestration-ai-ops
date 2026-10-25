@@ -19,10 +19,10 @@ Exemplo usado: `<projeto>` = `esteira` (primeiro projeto criado seguindo este gu
 7. bootstrap dos repositórios de código     (Claude Code)               ┐ fundação: uma vez,
 8. design system                            (Claude Code + impeccable)  ┘ sem spec formal
 ── daqui em diante, fatia a fatia ──
-9. spec       → /to-spec  → issue-mãe       (Claude Code)
-10. tickets   → /to-tickets → issues filhas (Claude Code)
-11. execução  → /implement-task             (Claude Code + subagentes, um painel do Alethe por spec)
-12. review    → /code-review → push → MR    (Claude Code, depois CI)
+9. spec       → /to-spec B2       → issue-mãe "B2 — …"          (Claude Code)
+10. tickets   → /to-tickets B2    → filhas "B2.1 — …"           (Claude Code)
+11. execução  → /implement-task B2 → tasks + review + MR pra dev (Claude Code + subagentes, um painel do Alethe por fatia)
+12. você      → revisa a MR no GitLab e mergeia                 (fechamento da fatia é automático)
 13. esteira   → tag vX.Y.Z-rcN → qa → hml → main
 ```
 
@@ -237,14 +237,35 @@ Fatia = entrega fina **ponta a ponta**, nunca "só o backend". Exceção: fatias
 ## 10. Tickets — `/to-tickets`
 
 ```
-/to-tickets
+/to-tickets B2
 ```
 
-Quebra a spec em tickets e mostra a quebra pra você aprovar. Publica cada um como **Task filha da issue-mãe** (aparece em "Child items" da mãe), com label de área + `ready-for-agent` e `Blocked by:` no topo. Como: `docs/agents/issue-tracker.md` ("Tickets de uma spec"); labels: `docs/agents/triage-labels.md`.
+Quebra a spec em tickets e mostra a quebra pra você aprovar. Publica cada um como **Task filha da issue-mãe** (aparece em "Child items" da mãe), título `B2.1 — …`, `B2.2 — …` na ordem de execução, com label de área + `ready-for-agent` e `Blocked by:` no topo. Como: `docs/agents/issue-tracker.md` ("Tickets de uma spec"); labels: `docs/agents/triage-labels.md`.
 
 **Pronto quando:** as issues estão no GitLab com dependências e a primeira está desbloqueada.
 
-## 11. Execução — `/implement-task` (Claude Code)
+### Nomes: o código da fatia liga tudo
+
+Você nunca precisa saber o `#` de uma issue. O código da fatia no mapa (`B2`) aparece em todo lugar:
+
+| Onde | Como aparece | Exemplo |
+|---|---|---|
+| GitLab, issue-mãe | `<fatia> — <título>` | `B2 — Result pattern + Problem Details (ADR-0003)` |
+| GitLab, filhas (Child items da mãe) | `<fatia>.<N> — <título>` | `B2.1` … `B2.5`: a última é a de maior N |
+| Branch, em cada repositório tocado | `feature/<fatia>-<slug da spec>` | `feature/b2-result-e-problem-details` |
+| Commit, um por filha | `… (<fatia>.<N> · workspace#<filha>)` | `feat: VOs devolvem Result (B2.5 · workspace#8)` |
+| MR pra `dev` | `<fatia> — <título>` | `B2 — Result pattern + Problem Details (ADR-0003)` |
+
+Com 4 mães (A, B, C, D) de 5 filhas cada: `/implement-task B2` só enxerga as filhas da mãe B2, só mexe na branch `feature/b2-*`, e antes de começar imprime o cabeçalho com o que vai fazer e o que está fora:
+
+```
+Fatia B2 — Result pattern + Problem Details (workspace#2) · spec specs/feature/base/02-…md
+Branch feature/b2-result-e-problem-details em esteira-api
+Filhas: B2.1 #4 ✔ · B2.2 #5 ✔ · B2.3 #6 ✔ · B2.4 #7 ✔ · B2.5 #8 → agora
+MR: — · Fora do escopo: tudo que não é filha de #2
+```
+
+## 11. Execução — `/implement-task B2` (Claude Code)
 
 Uma sessão por spec (um painel do Alethe cada, em paralelo se quiser), **sempre na raiz do workspace** — de lá ela enxerga `<projeto>-api/` e `<projeto>-frontend/`. Escolha o modo ao abrir (`docs/agents/orchestration.md`):
 
@@ -255,38 +276,80 @@ claude-pago     # quando o plano apertar: OmniRoute, DeepSeek → Luna
 claude-free     # último recurso: combos gratuitos
 ```
 
-**Qual spec rodar:** o mapa, `specs/README.md` — pode rodar a que tem todas as dependências feitas (mergeadas em `dev`). Você passa o número da **spec** (issue-mãe); as filhas ele acha e ordena pelo `Blocked by`.
+**Qual fatia rodar:** o mapa, `specs/README.md` — a que tem todas as dependências feitas (mergeadas em `dev`).
 
 ```
-/implement-task                     # a próxima spec desbloqueada do mapa (ele diz qual escolheu)
-/implement-task #<issue-mãe>        # uma spec específica: todas as filhas, em ordem
-/implement-task #<filha>            # uma task só (ex.: refazer depois de FAIL)
+/implement-task B2                  # a fatia inteira: o que falta, review e MR (o normal)
+/implement-task B2.5                # só essa filha (refazer uma task específica)
+/implement-task B2 — <instrução>    # com contexto seu (ex.: "corrigir: o critério 3 vale como na spec")
+/implement-task                     # a próxima fatia desbloqueada do mapa (ele diz qual escolheu)
 ```
 
-A sessão é o agente-pai: lê issue e spec pelo `glab`, cria (ou retoma) a branch `feature/<mãe>-<slug>` a partir de `origin/dev` em cada repositório que a spec toca, e implementa task a task com TDD. **Modo `claude`:** o próprio pai implementa (rápido; o `/code-review` no fim revisa tudo). **Modo pago/free:** delega cada task a um subagente executor com o `$TASK` autocontido, e um `review` por task. Nos dois: testes da task com filtro, **suite completa uma vez por task** antes do commit, escopo conferido com `git diff --stat`, uma filha por commit, **sem push**. Spec bloqueada → para e diz por quem.
+**Um comando só leva a fatia das tasks até a MR aberta.** Você não chama o `/code-review` nem repassa FAIL. O que acontece, em ordem:
 
-O que observar:
-- cada subagente devolve **Completado / Arquivos alterados / Suposições / Para o pai**;
-- teste escrito **antes** do código e congelado — asserção afrouxada pra passar é FAIL;
-- `review` reprova → o pai reabre o executor uma vez; reprovou de novo → **reporta**;
+1. **Fecha as fatias já mergeadas** (issues e mapa), se houver.
+2. **Cabeçalho**: fatia, filhas (✔ feitas, → próxima), branch, MR e o que está fora do escopo.
+3. **Branch** `feature/b2-<slug>` a partir de `origin/dev` em cada repositório que a fatia toca (ou retoma a que existe).
+4. **Cada filha que falta**, na ordem do `Blocked by`: TDD (teste vermelho antes do código), testes da task com filtro, suite completa uma vez, **commit** `… (B2.N · workspace#n)` na branch e uma nota na filha no GitLab com o sha. Modo `claude`: o próprio pai implementa. Modo pago/free: subagente executor + `review` por task.
+5. **`/code-review`** (Standards + Spec, contra `origin/dev`) assim que não sobra filha.
+6. **FAIL → ele corrige sozinho** (commit `fix: … (B2.N · …)`) e revisa de novo, no máximo 2 rodadas.
+7. **PASS → entrega**: prova `.code-review-ok.json`, **push** e **MR pra `dev`** com título `B2 — …`. A descrição traz tasks, commits, suposições e "Como testar". Ele também deixa uma nota na mãe com o link.
+8. **Relatório** fixo + notificação:
+
+```
+B2 — PRONTA PARA SUA REVISÃO          (ou: B2 — PAROU: precisa de você)
+MR: <link> (dev ← feature/b2-…)  · filhas B2.1–B2.5 ✔ · review PASS na rodada 1
+Suposições: …
+Você agora: abrir a MR, testar, aprovar e mergear — ou comentar na MR e rodar /implement-task B2
+```
+
+**Acompanhar pelo GitLab, sem olhar o terminal.** Os commits só sobem no fim, com a MR. Até lá, o andamento aparece na própria issue-mãe, que ganha este bloco na descrição, atualizado a cada passo:
+
+```markdown
+### Execução
+- [x] B2.1 #4 — `0b4bd79`
+- [x] B2.2 #5 — `86dd9db`
+- [x] B2.3 #6 — `8707df5`
+- [ ] B2.4 #7 — em andamento
+- [ ] B2.5 #8
+- [ ] Review
+- [ ] MR
+```
+
+- Na **lista de issues** do workspace, cada mãe mostra a contagem do checklist ("3 of 7"). Com A, B, C e D rodando em paralelo, você vê as quatro numa tela só.
+- Nos **Child items** da mãe, a filha que está sendo feita tem a label `em-andamento`, e cada filha terminada tem uma nota com o sha.
+- Se ele **parar**, a linha vira `⚠ parou: <motivo>`: dá pra ver o problema sem abrir o terminal.
+
+**Quando ele para e devolve pra você** (o relatório diz `PAROU` e a nota vai na mãe):
+
+| Motivo | O que você faz |
+|---|---|
+| working tree sujo num repositório da fatia | comita ou descarta o que é seu, roda `/implement-task B2` de novo |
+| filha bloqueada (`Blocked by` de outra fatia não feita) | roda a outra fatia antes |
+| review FAIL depois de 2 rodadas de correção | lê os achados no relatório: spec ambígua → corrige a spec; achado com o qual ele discorda → decide e roda `/implement-task B2 — <decisão>` |
+| spec ambígua ou contrato inventado | responde a pergunta exata do relatório |
+
+Em qualquer caso, ele retoma de onde parou: filha feita = commit dela na branch.
+
+O que observar durante a execução:
+- teste escrito **antes** do código e congelado — asserção afrouxada pra passar é quebra de regra, interrompa;
+- as **Suposições** no relatório: suposição errada é a origem da maioria dos retrabalhos;
 - modo pago/free sem resposta → OmniRoute fora (`node omniroute-config.mjs diff` no `ai-infra`).
 
-**Pronto quando:** todas as filhas com `review` PASS e commitadas na branch de feature.
+**Pronto quando:** o relatório diz `PRONTA PARA SUA REVISÃO` e a MR está aberta.
 
-## 12. Review — `/code-review` → push → MR
+## 12. Sua revisão da MR e o merge
 
-Na mesma sessão ou numa nova, interativa (nunca headless/CI):
+Tudo acontece no GitLab, na MR `B2 — …` do repositório de código (`<projeto>-api` e/ou `<projeto>-frontend`, uma MR em cada):
 
-```
-/code-review
-```
+1. **Lê** a descrição: tasks com commits, achados de julgamento não corrigidos e suposições.
+2. **Testa** pelo "Como testar" da descrição: `git -C <projeto>-api switch feature/b2-…`, sobe a aplicação e percorre os critérios da spec. Fatia com tela: `/impeccable critique|audit` contra o localhost (Parte 2, passo 8).
+3. **Decide:**
+   - **Está bom** → aprova e mergeia em `dev`. Fatia que toca API e front: mergeia a da API primeiro.
+   - **Precisa mudar** → comenta na MR (no código ou na conversa) e roda `/implement-task B2`. Ele lê os comentários não resolvidos, corrige, revisa de novo, faz push na mesma MR e responde cada comentário com o sha. Você confere e resolve os comentários.
+4. **Depois do merge, nada.** O próximo `/implement-task` ou `/to-spec` (de qualquer fatia) fecha a mãe e as filhas no GitLab e marca a fatia como feita no mapa. A MR vai pra `dev`, que não é o branch padrão, então o `Closes` do GitLab não fecharia as issues sozinho.
 
-Avalia o diff da branch contra os padrões do repositório e contra a spec (inclui o diff dos testes). Diff com UI → também `/skill:avoid-ai-design detect`; superfície sensível → skills de segurança (`docs/agents/security-review.md`).
-
-- **FAIL:** `/implement-task #<filha> — corrigir: <achados>`, mesma branch.
-- **PASS:** o Claude Code fecha a entrega (`docs/agents/orchestration.md`): grava e comita `.code-review-ok.json` em cada repositório alterado, faz push da branch de feature e abre a MR pra `dev` com `Closes <grupo>/<projeto>-workspace#<mãe>` (e as filhas). Com o gate do template-ci ligado no repositório, a MR é aberta pelo CI.
-
-Você aprova o merge. Depois: fechar a fatia (`specs/README.md`, `docs/workflow.md`).
+Próxima etapa: a próxima fatia do mapa (`/to-spec <fatia>` se ainda não tem spec, `/implement-task <fatia>` se já tem tickets). Quando todas as fatias da rodada estiverem em `dev`, passo 13.
 
 ## 13. Esteira — tag e promoção
 
@@ -330,19 +393,18 @@ Só o **mapa** nasce inteiro. Spec, tickets e testes nascem na hora em que vão 
  │  2. Arquitetura       ADR (se for decisão transversal)            │  você responde
  │  3. Spec              /to-spec <fatia>                            │
  │     ✋ VOCÊ: lê cada EARS e aprova                                ─┘
- │  4. Tickets           /to-tickets  → issues no GitLab
- │     ✋ VOCÊ: confere os Child items e o "Blocked by"  
- │  5. Branch            (o /implement-task cria: feature/<mãe>-<slug>)
- │  6. Execução          /implement-task #<mãe>        Claude + subagentes
- │     ✋ VOCÊ: acompanha o painel; lê o "Para o pai" de cada hop
- │  7. Ver funcionando   ng serve / dotnet run, abrir no navegador
+ │  4. Tickets           /to-tickets B2  → filhas B2.1…B2.N no GitLab
+ │     ✋ VOCÊ: confere os Child items e o "Blocked by"
+ │  5–6, 9–10.           /implement-task B2             Claude + subagentes
+ │     (LLM: branch feature/b2-… → filhas com TDD, commit cada → /code-review
+ │      → corrige FAIL sozinho → push → MR pra dev → relatório + notificação)
+ │     ✋ VOCÊ: só se ele PARAR (o relatório diz a decisão que falta)
+ │  7. Ver funcionando   na branch da MR: ng serve / dotnet run
  │     ✋ VOCÊ: testa o fluxo da spec na mão
  │  8. Design (se tem tela) /impeccable critique|audit contra o localhost
  │     ✋ VOCÊ: compara com as referências e aprova o visual
- │  9. Review            /code-review                  Claude Code
- │     ✋ VOCÊ: lê os achados; FAIL volta pro passo 6
- │ 10. Entrega           commit → push → MR pra dev
- │     ✋ VOCÊ: aprova o merge
+ │     ✋ VOCÊ: aprova e mergeia a MR — ou comenta e roda /implement-task B2
+ │     (LLM, no próximo comando: fecha mãe + filhas, marca o mapa)
  └─11. Retro (opcional)  /retro → ajusta skill/agent/ADR que falhou
 ```
 
@@ -381,10 +443,10 @@ claude        # ou claude-pago / claude-free
 ```
 
 ```
-/implement-task                     # próxima spec desbloqueada do mapa; ou #<issue-mãe> pra escolher
+/implement-task B2                  # ou vazio: próxima fatia desbloqueada do mapa
 ```
 
-Ele lê issue e spec, cria a branch e comita cada filha (passo 11). O que observar em cada hop, e o que fazer:
+Ele vai do cabeçalho até a MR aberta (passo 11). O que observar em cada hop, e o que fazer:
 
 | Sinal | O que significa | O que você faz |
 |---|---|---|
@@ -416,19 +478,15 @@ Com o app rodando, no Claude Code:
 - Compare com as referências do projeto (`docs/referencias/`, `docs/design/referencias.md`). Referência é inspiração: nunca copiar pacote React.
 - Aprovado o visual, o que for padrão (cor, espaçamento, componente) sobe pro `DESIGN.md`/`src/styles.css`, nunca fica só na tela.
 
-### 9. Review (Claude Code, sessão interativa)
+### 9. Review (dentro do `/implement-task`)
 
-```
-/code-review
-```
-
-Dois eixos em paralelo: padrão do repositório (ADRs, `CLAUDE.md` do componente) e conformidade com a spec, incluindo o diff dos testes. Superfície sensível (auth, sessão, segredo, dependência nova) → `/security-review` também. FAIL → `/implement-task #<filha> — corrigir: <achados>` na mesma branch.
+Você não chama. Quando não sobra filha, o `/implement-task` roda o `/code-review` em dois eixos paralelos: padrão do repositório (ADRs, `CLAUDE.md` do componente) e conformidade com a spec, incluindo o diff dos testes. O ponto fixo é `origin/dev`, ou seja, todas as filhas da fatia de uma vez. FAIL → ele corrige e revisa de novo (até 2 rodadas); só depois disso para e te devolve. Superfície sensível (auth, sessão, segredo, dependência nova) → `/security-review` também. Quer revisar à mão? `/code-review B2` na raiz do workspace.
 
 ### 10. Entrega
 
-- PASS no `/code-review` → o próprio Claude Code grava a prova, faz push da branch e abre a MR pra `dev` (sem template-ci) — você não roda git nenhum.
-- Com o template-ci ligado: o job `verify-code-review` confere a prova e quem abre a MR é o CI.
-- Você aprova o merge. Publicação (tags/qa/hml/prod) é o passo 13 e só entra quando você decidir.
+- PASS → o próprio Claude Code grava a prova, faz push da branch e abre a MR `B2 — …` pra `dev` (sem template-ci). Você não roda git nenhum. Com o template-ci ligado, o job `verify-code-review` confere a prova e quem abre a MR é o CI.
+- Você revisa, testa e mergeia (passo 12). Depois do merge, a fatia fecha sozinha no próximo comando.
+- Publicação (tags/qa/hml/prod) é o passo 13 e só entra quando você decidir.
 
 ### 11. Retro
 
@@ -491,4 +549,4 @@ Depois, na mesma sessão, o design system (passo 8) e a página de amostra para 
 | 6 | ADRs 0001–0016 (0015: spartan/ui no lugar do PrimeNG); referências do TCE em `docs/referencias/tce-fluxo-deploy/` |
 | 7 | F0 (frontend) mergeada em `dev`; M0 (API) mergeada em `dev` |
 | 8 | D0 feito (`DESIGN.md`, `PRODUCT.md`, tokens no `styles.css`, protótipos em `docs/design/prototipos/`). **Falta:** mergear `feature/d0-tema` (frontend) em `dev` e `docs/d0-prototipos` (workspace) em `main` |
-| 9+ | **próximo:** grill + spec de B1 e B2 juntas (API, só dependem da M0) → B3 → F0.5 |
+| 9+ | specs de B1 (#3) e B2 (#2) escritas, com tickets. **B2 em execução**: B2.1–B2.4 comitadas em `feature/b2-result-e-problem-details` (`esteira-api`), falta B2.5 → `/implement-task B2` leva até a MR. Depois: B1 → B3 → F0.5 |
