@@ -1,6 +1,6 @@
 # OmniRoute (gateway de LLM dos modos `claude-pago`/`claude-free`) — procedimento do agente
 
-OmniRoute é o gateway (OpenAI e Anthropic-compatible) que fica na frente dos modelos que não são a assinatura do Claude: nos modos `claude-pago`/`claude-free`, o Claude Code usa combos dele (`pi-code`, `pi-quality`, `pi-exec`, `pi-light` — nomes históricos), nunca provider direto. Serviço `omniroute` em `ai-infra/container/docker-compose.yml`.
+OmniRoute é o gateway (OpenAI e Anthropic-compatible) que fica na frente dos modelos que não são a assinatura do Claude: nos modos `claude-pago`/`claude-free`, o Claude Code usa combos dele (`omni-pago`, `omni-review`, `omni-free`, `omni-light` — nomes históricos), nunca provider direto. Serviço `omniroute` em `ai-infra/container/docker-compose.yml`.
 
 **Configuração é código:** tudo (providers, combos, settings, keys) vive em `ai-infra/configs/omniroute/config/*.json` (git, sem segredo) + `ai-infra/container/.env` (segredos), aplicado por `ai-infra/configs/omniroute/omniroute-config.mjs`. Ler `ai-infra/configs/omniroute/README.md` (como funciona) e `combos.md` (por quê) antes deste procedimento. O agent **nunca configura pelo dashboard** — só pelo script, que é idempotente e tem `diff` (dry-run).
 
@@ -16,7 +16,7 @@ Perguntar ao humano se já existe OmniRoute rodando fora do Docker (npm global, 
    node omniroute-config.mjs export --harvest-secrets --ask-password
    ```
    Isso grava `config/*.json` (estado atual) e as chaves de provider no `ai-infra/container/.env` — o agent nunca vê os valores. Pedir pro humano commitar esse snapshot como está (baseline: o `git diff` das decisões fica legível depois).
-2. **Agent executa:** aplicar em `config/*.json` as decisões do `combos.md` que ainda não estiverem lá (combos `pool-exec-free`/`pi-code`/`pi-exec`/`pi-light`/`pi-quality`, Caveman off, semantic cache off, providers `deepseek`/`openai`, keys `pi`/`eval` com `windowsEnv`) — só edição de arquivo, mostrar o diff, humano revisa e commita. Combo antigo fora do `combos.md` (ex.: `pi.dev`): perguntar nominalmente se remove.
+2. **Agent executa:** aplicar em `config/*.json` as decisões do `combos.md` que ainda não estiverem lá (combos `pool-exec-free`/`omni-pago`/`omni-free`/`omni-light`/`omni-review`, Caveman off, semantic cache off, providers `deepseek`/`openai`, keys `claude-modos`/`eval` com `windowsEnv`) — só edição de arquivo, mostrar o diff, humano revisa e commita. Combo antigo fora do `combos.md` (ex.: `pi.dev`): perguntar nominalmente se remove.
 3. **Depende do humano:** parar a instância antiga. Só depois disso subir o container (passo 3).
 
 Desinstalar o npm global e apagar `~/.omniroute`/pasta de export antiga: só depois do passo 6 (prova ponta a ponta) passar, e sempre o humano.
@@ -51,7 +51,7 @@ node omniroute-config.mjs apply --setx
 node omniroute-config.mjs diff        # verificação: tem que sair "0 mudança(s)"
 ```
 
-`--setx` grava no Windows as keys de cliente recém-criadas (`pi` → `OMNIROUTE_API_KEY`, `eval` → `OMNIROUTE_EVAL_KEY`) sem o valor passar pelo terminal. `--prune` (remover o que está na instância e não no git) só com confirmação nominal do humano — é remoção de config em uso.
+`--setx` grava no Windows as keys de cliente recém-criadas (`claude-modos` → `OMNIROUTE_API_KEY`, `eval` → `OMNIROUTE_EVAL_KEY`) sem o valor passar pelo terminal. `--prune` (remover o que está na instância e não no git) só com confirmação nominal do humano — é remoção de config em uso.
 
 Saída com "Pendências" (segredo ausente, erro de API): regra do item 8 do Fluxo obrigatório — parar e reportar, nunca contornar. Segundo `diff` diferente de 0: erro, reportar o que sobrou.
 
@@ -67,10 +67,10 @@ Só depois do humano confirmar a `OMNIROUTE_API_KEY` num terminal novo. Pedir co
 
 ```powershell
 $k = [Environment]::GetEnvironmentVariable('OMNIROUTE_API_KEY','User')
-Invoke-RestMethod http://localhost:20128/v1/messages -Method Post -Headers @{ 'x-api-key' = $k; 'anthropic-version' = '2023-06-01' } -ContentType 'application/json' -Body '{"model":"pi-light","max_tokens":20,"messages":[{"role":"user","content":"say ok"}]}'
+Invoke-RestMethod http://localhost:20128/v1/messages -Method Post -Headers @{ 'x-api-key' = $k; 'anthropic-version' = '2023-06-01' } -ContentType 'application/json' -Body '{"model":"omni-light","max_tokens":20,"messages":[{"role":"user","content":"say ok"}]}'
 ```
 
-`pi-code`/`pi-quality` (pagos) ficam pro `claude-modos.md` e pro `smoke-test.md` da Etapa 2.
+`omni-pago`/`omni-review` (pagos) ficam pro `claude-modos.md` e pro `smoke-test.md` da Etapa 2.
 
 ## 7. Relatório
 

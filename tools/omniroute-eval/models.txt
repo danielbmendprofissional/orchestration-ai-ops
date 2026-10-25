@@ -13,7 +13,7 @@ groq/openai/gpt-oss-120b
 # gemini/gemini-3.8-flash   # 403 projeto Google negado
 # sambanova/DeepSeek-V3.2   # 402 exige pagamento
 
-# --- candidatos a pi-light ---
+# --- candidatos a omni-light ---
 groq/openai/gpt-oss-20b
 mistral/ministral-14b-latest
 cloudflare-ai/@cf/zai-org/glm-4.7-flash

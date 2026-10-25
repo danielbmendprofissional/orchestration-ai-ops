@@ -41,7 +41,7 @@ Resultado: tabela no terminal + `results/<timestamp>.md` e `.json` (fora do git)
 
 ## Depois de rodar
 
-1. Modelo com qualidade baixa (< 50%): sai do `pool-exec-free`; se for rápido, candidato a `pi-light`.
+1. Modelo com qualidade baixa (< 50%): sai do `pool-exec-free`; se for rápido, candidato a `omni-light`.
 2. Ordenar o `pool-exec-free` por qualidade, desempate por disponibilidade.
 3. Atualizar a seção "Ranking" de `ai-infra/configs/omniroute/combos.md` com a tabela e aplicar a ordem no dashboard.
 4. Rodar de novo quando entrar modelo novo ou a cada ~2 semanas — free tier muda sem aviso.
