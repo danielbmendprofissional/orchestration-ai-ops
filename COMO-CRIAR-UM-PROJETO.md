@@ -4,6 +4,52 @@ Guia curto. Cada seção termina com o link do detalhe. Todos os comandos: [glos
 
 > **Perdeu o fio?** Abra o Claude na raiz do workspace e digite **`/proximo`**. Ele diz onde você está, o seu próximo passo e de onde vem cada fatia.
 
+## Começar a desenvolver — checklist do dia
+
+Sempre que for trabalhar, nesta ordem. **Todos os comandos no PowerShell.** Exemplo com a Esteira; troque pelos caminhos do seu projeto.
+
+| # | O que abrir | Como | Pronto quando |
+|---|---|---|---|
+| 1 | **Docker Desktop** | abrir o aplicativo | ícone verde, "running" |
+| 2 | **Infra compartilhada** (Postgres, Redis, RabbitMQ, Keycloak, observabilidade, OmniRoute) | `cd C:\Users\danib\source\repos\orquestracao-ai\ai-infra\configs\infra` e `node infra-config.mjs up` | termina com `✔ tudo conferido` (nunca `docker compose up` puro) |
+| 3 | **Conferir a infra** nas URLs abaixo | abrir no navegador | cada uma abre |
+| 4 | **Editor** | `code C:\Users\danib\source\repos\orquestracao-ai\ai-pipeline\esteira` (VS Code, com o profile `dotnet-backend` para a API e `angular-frontend` para o front). Outro editor, como o Codex: abra a mesma pasta do **workspace** | a pasta do workspace aberta |
+| 5 | **Claude** (na raiz do workspace) | `cd C:\Users\danib\source\repos\orquestracao-ai\ai-pipeline\esteira` e `claude` (ou `claude-pago` / `claude-free`; no Alethe, um painel por fatia) | abre o prompt |
+| 6 | **Situação do git** | no Claude: `/situacao`, e peça *"pode alinhar e limpar"* para ele rodar os comandos de alinhar e limpar | "Pronto para começar a próxima fatia? SIM" |
+| 7 | **Próximo passo** | no Claude: `/proximo` | você sabe o que fazer |
+| 8 | **API** | `cd ...\esteira\esteira-api` e `dotnet run --project src\Esteira.Api --launch-profile http` | `http://localhost:5105/health` responde |
+| 9 | **Frontend** | `cd ...\esteira\esteira-frontend` e `npm start` | `http://localhost:4200` abre |
+| 10 | **GitLab** | abas abaixo | você vê issues e MRs |
+
+Os passos 8 e 9 só se for testar no navegador. Precisa de login? Veja [Acessos e senhas](#acessos-e-senhas-de-desenvolvimento).
+
+**URLs para ver o estado (infra e app):**
+
+| O que | URL |
+|---|---|
+| App (frontend) | `http://localhost:4200` |
+| API: saúde · métricas · documentação | `http://localhost:5105/health` · `/metrics` · `/scalar/v1` |
+| Keycloak (administração) | `http://localhost:8080/admin` |
+| pgAdmin (banco) | `http://localhost:15432` |
+| RabbitMQ (filas) | `http://localhost:15672` |
+| Grafana (logs e métricas) | `http://localhost:3000` |
+| Prometheus (alvos) | `http://localhost:9090` |
+| OmniRoute (só para `claude-pago`/`claude-free`) | `http://localhost:20128` |
+| Redis | sem interface: `docker ps` mostra o contêiner `redis` saudável |
+
+**GitLab (grupo `orchestration-ai/ai-pipeline/esteira`) — abra como abas:**
+
+| O que | URL |
+|---|---|
+| Issues do workspace (mães e tickets) | `https://gitlab.com/orchestration-ai/ai-pipeline/esteira/esteira-workspace/-/issues` |
+| **O que está em execução** (board por label `em-execucao`) | `https://gitlab.com/orchestration-ai/ai-pipeline/esteira/esteira-workspace/-/boards` |
+| MRs da API | `https://gitlab.com/orchestration-ai/ai-pipeline/esteira/esteira-api/-/merge_requests` |
+| MRs do frontend | `https://gitlab.com/orchestration-ai/ai-pipeline/esteira/esteira-frontend/-/merge_requests` |
+| Pipelines (API · frontend) | `.../esteira-api/-/pipelines` · `.../esteira-frontend/-/pipelines` |
+| MRs/issues do `ai-infra`, `ai-base`, `ai-ops`, `template-ci` (melhorias) | `https://gitlab.com/orchestration-ai/<repo>/-/issues` |
+
+Os tickets de uma fatia aparecem como **Child items** dentro da issue-mãe. Fim do dia: nada solto — rode `/situacao` de novo.
+
 ## Acessos e senhas de desenvolvimento
 
 **As senhas não ficam anotadas em lugar nenhum: foram geradas pelo script da infra.** Onde achar:
@@ -54,7 +100,8 @@ Abra `http://localhost:4200` (nunca direto a porta da API). Reiniciou a infra ou
 
 | Quero | Vá para |
 |---|---|
-| **achar uma senha/acesso de desenvolvimento, ou subir o projeto local** | **[Acessos](#acessos-e-senhas-de-desenvolvimento)** |
+| **começar a desenvolver (o que abrir, em ordem)** | **[Checklist do dia](#começar-a-desenvolver--checklist-do-dia)** |
+| **achar uma senha/acesso de desenvolvimento** | **[Acessos](#acessos-e-senhas-de-desenvolvimento)** |
 | preparar a máquina | [A1](#a1-máquina) |
 | criar um projeto novo, ou trazer um que já existe | [A2](#a2-projeto-novo-ou-existente) |
 | entender o que o discovery gera (e o que não gera) | [A3](#a3-discovery-e-decisões) |
