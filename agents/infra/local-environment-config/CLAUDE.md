@@ -32,6 +32,10 @@ Fora desses dois passos, nada neste arquivo lê, cita ou depende de `ai-base` �
 8. Erro (inclui falha de verificação do item 6): parar imediatamente. Reportar o comando exato, a saída completa, o que já rodou antes, e o diagnóstico do que foi encontrado (ex.: arquivo existe mas pasta não está no PATH). Nunca tenta alternativa sozinho, nunca ignora e segue.
 9. Ao final: relatório do que foi feito, onde acessar cada coisa, onde cada credencial nova ficou guardada (nunca o valor), e o comando de teste de cada item. **Na Etapa 2, esse relatório também vira um arquivo `.md` persistido no projeto** (não só texto no chat — ver formato exato em "Relatório em arquivo" logo abaixo dos "Passos"). Ao terminar, avisar explicitamente que o arquivo foi criado/atualizado e o caminho completo dele.
 
+## Melhoria na ferramenta ou no processo
+
+Lacuna em `ai-infra`, `ai-ops`, `ai-base` ou `template-ci` (ex.: o `verify` não prova algo que o doc manda conferir): **propor ao humano e, com o sim, abrir a issue** no repositório certo — nunca implementar, nunca ignorar em silêncio. Procedimento: `docs/enviroment/propor-melhoria.md`. Entra no relatório final como pendência, com o link.
+
 ## Regra de classificação
 
 **Depende do humano**: credencial/segredo sem resposta objetiva (senha, chave de API, e-mail, usuário admin — nunca inventa nem sugere valor); decisão de custo real; instalador gráfico sem CLI scriptável; qualquer item listado em "Fora de escopo". Antes de parar, verificar se já está resolvido (chave já existe? decisão já tomada em algum `.md`?) — só para se não estiver.
@@ -129,12 +133,12 @@ Passos, nessa ordem:
    ```powershell
    Remove-Item -Recurse -Force .git
    git init -b main
-   git remote add origin <url-do-projeto-workspace>
+   git remote add origin <url-SSH-do-projeto-workspace>   # sempre git@gitlab.com:<grupo>/<repo>.git, nunca https
    ```
 4. Criar a pasta de cada componente dentro do workspace (já ignoradas pelo `.gitignore` do template — componente fora de `-api`/`-frontend` ganha linha nova lá) e iniciar o git de cada uma:
    ```powershell
    git init -b main <endereço-local>\<projeto>-api
-   git -C <endereço-local>\<projeto>-api remote add origin <url-do-projeto-api>
+   git -C <endereço-local>\<projeto>-api remote add origin <url-SSH-do-projeto-api>
    ```
    (repetir pro `-frontend`). Em cada uma, copiar o `.gitlab-ci.yml` de `templates/` do workspace (`api.gitlab-ci.yml` / `frontend.gitlab-ci.yml`, renomeado pra `.gitlab-ci.yml`) — os valores vazios (`DOTNET_SOLUTION`, `ANGULAR_DIST_PATH`, ...) ficam pro scaffold de stack, não inventar.
 5. Escrever o `CONTEXT-MAP.md` inicial na raiz do workspace apontando os componentes (`backend → <projeto>-api/`, `frontend → <projeto>-frontend/`) — o conteúdo dos `CONTEXT.md` é do `/domain-modeling`, não deste agent.

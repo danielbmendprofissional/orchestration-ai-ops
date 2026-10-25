@@ -32,7 +32,7 @@ Inventário é mecânico: dúvida (ex.: não sei qual csproj é a API) → pergu
 
 ## 2. Plano — quatro blocos
 
-Clonar o `ai-base` atual numa pasta temporária, read-only (`git clone --depth 1 https://gitlab.com/orchestration-ai/ai-base.git <tmp>`), anotar o sha (`git -C <tmp> rev-parse --short HEAD`), e montar o plano. Cada item com ação + motivo. Ações: **Adicionar**, **Modificar**, **Remover** (só candidato), **Revisar manualmente**, **Spec** (vai pra spec de adequação), **Depende do humano**.
+Clonar o `ai-base` atual numa pasta temporária, read-only (`git clone --depth 1 git@gitlab.com:orchestration-ai/ai-base.git <tmp>`), anotar o sha (`git -C <tmp> rev-parse --short HEAD`), e montar o plano. Cada item com ação + motivo. Ações: **Adicionar**, **Modificar**, **Remover** (só candidato), **Revisar manualmente**, **Spec** (vai pra spec de adequação), **Depende do humano**.
 
 ### Bloco A — ambiente de IA (arquivos de processo)
 

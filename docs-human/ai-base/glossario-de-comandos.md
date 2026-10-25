@@ -9,6 +9,7 @@ Os comandos `/…` rodam dentro do Claude Code, na **raiz do workspace** (ou na 
 | Comando | Para quê | Quando | Você aprova |
 |---|---|---|---|
 | **`/proximo`** | Tutor, somente leitura: onde você está, qual o **seu** próximo passo, de onde vem a próxima fatia (mapa, ADR, spec), o que ela destrava, o que pode rodar em paralelo, se precisa de grill | A qualquer hora; depois de dormir, de trocar de assunto, ao terminar uma fatia | — |
+| **`/mapa`** | Confere o mapa de fatias contra tudo que o projeto já definiu (telas dos protótipos, ADRs, `mudancas-*`, pendências, glossário): lista o que está **sem fatia** ou **parcial**, fatias **grandes demais** e inconsistências, e propõe as linhas novas. Somente leitura; `/mapa aplicar` edita depois do seu ok | Ao fim do discovery; quando o `/proximo` avisar que ADR ou protótipo é mais novo que o mapa; antes de começar uma rodada nova | A proposta de mapa |
 | **`/fatia B3`** | Leva a fatia do zero à MR: spec → **[você aprova]** → tickets automáticos → execução → review → MR. Retoma de onde parou se for rodado de novo | Quando o `/proximo` disser que a fatia está livre | A spec; depois a MR |
 | **`/implement-task B3`** | Só a execução (tasks com TDD, suite, `/code-review`, correção, push, MR). Já usado pelo `/fatia` | Spec e tickets prontos; ou para corrigir a MR depois de um comentário seu | A MR |
 
@@ -61,6 +62,7 @@ Variações:
 | `/retro` | Retrospectiva: o que falhou vira ajuste no lugar certo (ai-base, agente, ADR) | Depois de cada fatia, nos primeiros projetos |
 | `/triage` | Move issues pelo vocabulário de labels (`docs/agents/triage-labels.md`) | Issues fora do fluxo de fatia |
 | `/improve-codebase-architecture` · `/codebase-design` | Varredura de arquitetura · vocabulário de módulos | A cada N dias ou sprints, não por ticket |
+| `/issue-ai <n>` | Executa uma issue de melhoria do `orchestration-ai` (plano, branch, implementação, MR; nunca mergeia). **Dentro da pasta de `ai-base`, `ai-infra`, `ai-ops` ou `template-ci`**, não do projeto | Quando um agent propôs uma melhoria, você disse sim e ele abriu a issue ([guia](../../COMO-CRIAR-UM-PROJETO.md#melhorias-na-orquestração)) |
 | `/handoff` | Compacta a conversa para outro agente ou sessão continuar | Antes de trocar de modo ou encerrar uma sessão longa |
 | `/ask-matt` | Roteador: qual skill serve para a sua situação | Quando não souber qual usar |
 

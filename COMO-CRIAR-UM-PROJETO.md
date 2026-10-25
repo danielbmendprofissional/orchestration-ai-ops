@@ -4,13 +4,61 @@ Guia curto. Cada seção termina com o link do detalhe. Todos os comandos: [glos
 
 > **Perdeu o fio?** Abra o Claude na raiz do workspace e digite **`/proximo`**. Ele diz onde você está, o seu próximo passo e de onde vem cada fatia.
 
+## Acessos e senhas de desenvolvimento
+
+**As senhas não ficam anotadas em lugar nenhum: foram geradas pelo script da infra.** Onde achar:
+
+| O que | Onde |
+|---|---|
+| **todas as senhas e usuários** (admin e de cada projeto) | `ai-infra\container\.env` (fora do git; nunca cole no chat nem commite) |
+| o que a API lê em dev (connection strings, client do Keycloak…) | user-secrets da API, regravados por `node infra-config.mjs secrets <projeto> --csproj=<caminho>`; cópia em `ai-infra\container\generated\projects\<projeto>.secrets.json` |
+| **quais acessos existem** (URL, usuário, qual variável tem a senha), sem os valores | `docs/agents/relatorio-ambiente.md` do projeto |
+
+Variáveis do projeto no `.env` têm o nome em maiúsculas: para o projeto `esteira`, `PROJECT_ESTEIRA_…`.
+
+| Acesso | URL | Usuário | Variável da senha |
+|---|---|---|---|
+| **Login do app em dev** (Keycloak) | abre pelo app: `http://localhost:4200` | `dev` (com permissões) · `dev-sem-papel` (sem) | `PROJECT_<PROJETO>_KEYCLOAK_DEV_PASSWORD` (a mesma para os dois) |
+| Keycloak (administração) | `http://localhost:8080/admin` | variável `KEYCLOAK_ADMIN` | `KEYCLOAK_ADMIN_PASSWORD` |
+| pgAdmin | `http://localhost:15432` | variável `PGADMIN_DEFAULT_EMAIL` | `PGADMIN_DEFAULT_PASSWORD` |
+| Postgres do projeto | `localhost:5432` | `<projeto>_owner` (migrations) · `<projeto>_app` (runtime) | `PROJECT_<PROJETO>_PG_OWNER_PASSWORD` · `PROJECT_<PROJETO>_PG_APP_PASSWORD` |
+| RabbitMQ | `http://localhost:15672` | variável `RABBITMQ_DEFAULT_USER` | `RABBITMQ_DEFAULT_PASS` |
+| Grafana | `http://localhost:3000` | variável `GF_SECURITY_ADMIN_USER` | `GF_SECURITY_ADMIN_PASSWORD` |
+| Redis | `localhost:6379` | ACL user `<projeto>` | `PROJECT_<PROJETO>_REDIS_PASSWORD` |
+
+**Comandos — todos no PowerShell** (Windows Terminal ou terminal do VS Code). No CMD não há equivalente simples: use o PowerShell.
+
+```powershell
+# copiar uma senha para a área de transferência, SEM mostrar na tela (troque o nome da variável)
+(Get-Content C:\Users\danib\source\repos\orquestracao-ai\ai-infra\container\.env | Where-Object { $_ -match '^PROJECT_ESTEIRA_KEYCLOAK_DEV_PASSWORD=' }) -replace '^[^=]+=','' | Set-Clipboard
+
+# listar só os NOMES das variáveis de um projeto (sem valores)
+Select-String -Path C:\Users\danib\source\repos\orquestracao-ai\ai-infra\container\.env -Pattern '^PROJECT_ESTEIRA_' | ForEach-Object { ($_.Line -split '=')[0] }
+```
+
+Depois é só colar (Ctrl+V) no campo de senha. Se o valor estiver entre aspas no `.env`, abra o arquivo no VS Code e copie sem elas.
+
+**Subir o projeto para testar em dev** (dois terminais PowerShell):
+
+```powershell
+cd <workspace>\<projeto>-api
+dotnet run --project src\<Projeto>.Api --launch-profile http     # perfil http, NÃO https: o login depende da mesma origem
+
+cd <workspace>\<projeto>-frontend
+npm start                                                         # o ng está dentro do projeto; "ng serve" solto pode não existir
+```
+
+Abra `http://localhost:4200` (nunca direto a porta da API). Reiniciou a infra ou rodou o `secrets`? Reinicie a API.
+
 ## Quero…
 
 | Quero | Vá para |
 |---|---|
+| **achar uma senha/acesso de desenvolvimento, ou subir o projeto local** | **[Acessos](#acessos-e-senhas-de-desenvolvimento)** |
 | preparar a máquina | [A1](#a1-máquina) |
 | criar um projeto novo, ou trazer um que já existe | [A2](#a2-projeto-novo-ou-existente) |
 | entender o que o discovery gera (e o que não gera) | [A3](#a3-discovery-e-decisões) |
+| **conferir se o mapa está completo** | **[Conferir o mapa](#conferir-o-mapa)** |
 | **saber quantas fatias faltam e como o fluxo anda** | **[Como o fluxo anda](#como-o-fluxo-anda)** |
 | fazer a próxima fatia | [Parte B](#parte-b-rotina-por-fatia) |
 | saber quando as specs são geradas | [B2](#b2-quando-as-specs-são-geradas) |
@@ -18,6 +66,7 @@ Guia curto. Cada seção termina com o link do detalhe. Todos os comandos: [glos
 | a execução parou (`PAROU`) | [Quando para](#quando-ele-para) |
 | rodar várias fatias ao mesmo tempo | [Paralelismo](#paralelismo) |
 | a spec ficou velha | [Spec velha](#spec-velha) |
+| um agent sugeriu melhorar a infra, o template ou o processo | [Melhorias na orquestração](#melhorias-na-orquestração) |
 | onde está o glossário (`CONTEXT`) e os outros arquivos | [Onde fica cada coisa](#onde-fica-cada-coisa) |
 | ver o estado da Esteira | [Estado da Esteira](#estado-da-esteira) |
 
@@ -49,7 +98,7 @@ Etapa 1: configuração inicial da máquina.
 
 Ele verifica o que já existe, mostra o plano, **espera o seu ok**, executa e verifica. Instala Claude Code, `glab` e Angular CLI, sobe a infra compartilhada (`ai-infra`), o OmniRoute e os modos `claude-pago`/`claude-free`.
 
-**Você faz** (o agent nunca faz): instalar Node, Git, VS Code e Docker Desktop; cadastrar chaves (`setx NOME "valor"`); instalar o Alethe; criar os profiles do VS Code.
+**Você faz** (o agent nunca faz): instalar Node, Git, VS Code e Docker Desktop; cadastrar chaves (`setx NOME "valor"`); instalar o Alethe; criar os profiles do VS Code; criar a **chave SSH** do GitLab (`ssh-keygen -t ed25519`, colar a `.pub` em GitLab → Preferences → SSH Keys, testar com `ssh -T git@gitlab.com`). Todos os remotes são **SSH** (`git@gitlab.com:…`), nunca HTTPS: sem pedido de login a cada push.
 
 **Pronto quando:** o relatório final não tem pendência e `claude-pago -p "responda ok"` responde.
 Detalhe: [agent](agents/infra/local-environment-config/CLAUDE.md), Etapa 1.
@@ -114,7 +163,7 @@ Ele entrevista, uma pergunta por vez. "Não sei, recomende" é resposta válida.
 
 Trabalho grande demais para uma sessão: `/wayfinder` antes. Em dúvida de qual skill usar: `/ask-matt`.
 
-**Pronto quando:** não sobra pergunta aberta e o mapa existe.
+**Pronto quando:** não sobra pergunta aberta, o mapa existe **e o `/mapa` não aponta item sem fatia** (próxima seção).
 
 ## A4 Fundação bootstrap e design
 
@@ -127,6 +176,32 @@ Feita pelo Claude Code direto das ADRs e dos `padrao-*.md`, **sem spec nem ticke
 
 **Pronto quando:** `ng serve`/`dotnet run` sobem, `npm test` roda, o design está aprovado e as branches estão **mergeadas em `dev`**.
 Detalhe: [padrão do frontend](../ai-base/docs/agents/padrao-frontend.md) · [padrão da API](../ai-base/docs/agents/padrao-api.md) · [infra local](../ai-base/docs/agents/infra-local.md).
+
+## Conferir o mapa
+
+O mapa envelhece: protótipo, ADR e `docs/mudancas-*.md` aparecem depois do discovery, e nada garante que viraram fatia. **Rode no fim do discovery, e de novo sempre que o `/proximo` avisar** ("ADR/protótipo/mudança alterados depois do último ajuste do mapa").
+
+```
+/mapa
+```
+
+Ele cruza tudo que o projeto já definiu — telas dos protótipos, ADRs, `mudancas-template`/`mudancas-infra`, pendências, glossário — com as linhas do `specs/README.md` e responde:
+
+```
+Cobertura do mapa: 42 itens · 25 cobertos · 9 parciais · 8 sem fatia
+Fatias grandes demais: E1 (6 assuntos), E2 (4)
+```
+
+Cada item aponta a origem (arquivo e seção) e a fatia que o cobre, ou "sem fatia". Ao final ele **propõe as linhas** que mudam. O que você faz com o resultado:
+
+| Resultado | O que você faz |
+|---|---|
+| tudo coberto, nenhuma fatia grande demais | nada; siga com `/proximo` |
+| item **sem fatia** ou **parcial** | aprove a linha proposta (ou diga qual muda) e rode `/mapa aplicar` |
+| fatia **grande demais** | aprove o corte proposto (`E1` vira `E1a`, `E1b`…) e `/mapa aplicar` |
+| item que **nenhuma ADR cobre** | `/grill-with-docs` sobre ele antes de virar fatia |
+
+O `/mapa` nunca altera nada sozinho; `aplicar` só depois do seu ok, e a mudança vai no próximo commit de docs. Detalhe: [`/mapa`](../ai-base/.claude/commands/mapa.md).
 
 ---
 
@@ -316,6 +391,41 @@ node .claude/scripts/worktree-fatia.mjs --remove B2   # ao terminar
 
 Cada fatia tem a sua spec, o seu review e a sua MR. Acompanhe no board por label `em-execucao` e com `/proximo` num painel livre. A mesma fatia em dois painéis é bloqueada pelo label.
 Detalhe: [orquestração, "Execução paralela"](../ai-base/docs/agents/orchestration.md).
+
+---
+
+# Melhorias na orquestração
+
+Durante o trabalho, um agent pode perceber que falta ou está errado algo **fora do projeto**: no `ai-infra` (ex.: o `verify` não prova uma configuração), no `ai-base` (processo, comandos), no `ai-ops` (guias, agents) ou no `template-ci` (pipeline). Ele **não contorna em silêncio nem edita lá de dentro do projeto**:
+
+| # | Quem | O que acontece |
+|---|---|---|
+| 1 | agent | **propõe**: o quê, em qual repositório, por quê, e se **bloqueia** a fatia atual (com a recomendação dele) |
+| 2 | ✋ você | responde: `sim`, `não` ou ajusta ("abra, mas não bloqueia") |
+| 3 | agent | com o sim, **abre a issue** no repositório certo (label `melhoria`, `origem:<projeto>`, e `bloqueia:<projeto>` se bloqueia) e diz o efeito na fatia |
+| 4 | ✋ você | quando quiser resolver, **abre o repositório** e roda o comando abaixo |
+| 5 | agent | lê a issue, mostra o plano, faz numa branch e abre a MR |
+| 6 | ✋ você | revisa e **mergeia** a MR; o merge fecha a issue |
+
+**Executar a issue** (passo 4): abra o Claude na pasta do repositório, não do projeto.
+
+```powershell
+cd <orquestracao-ai>\ai-infra       # ou ai-base, ai-ops, ai-pipeline\template-ci
+claude
+```
+```
+/issue-ai 7
+```
+
+Ele mostra o plano e **pergunta antes** de qualquer coisa ambígua ou que mexa em algo em execução (ex.: `apply` na infra). Nunca mergeia.
+
+**Como o agent do projeto trata isso:**
+- **Bloqueia** → ele para naquele ponto e diz o que dá para fazer até o merge. A fatia bloqueada não é recomendada pelo `/proximo` enquanto a issue não fechar.
+- **Não bloqueia** → ele segue, e a issue fica listada no `/proximo` com a fatia sugerida para resolvê-la antes.
+- O `/proximo` mostra as issues abertas (`ai-infra#7 — … · MR !3 aberta`) e o próximo passo seu (abrir o repositório e `/issue-ai 7`, ou mergear a MR).
+
+Melhoria do **produto** (uma tela, uma regra que falta) não é isto: vai para o mapa de fatias ([Conferir o mapa](#conferir-o-mapa)).
+Detalhe: [processo](../ai-base/docs/agents/melhoria-orquestracao.md) · [comando](../ai-base/.claude/commands/issue-ai.md).
 
 ---
 
