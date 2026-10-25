@@ -9,6 +9,7 @@ Os comandos `/…` rodam dentro do Claude Code, na **raiz do workspace** (ou na 
 | Comando | Para quê | Quando | Você aprova |
 |---|---|---|---|
 | **`/proximo`** | Tutor, somente leitura: onde você está, qual o **seu** próximo passo, de onde vem a próxima fatia (mapa, ADR, spec), o que ela destrava, o que pode rodar em paralelo, se precisa de grill | A qualquer hora; depois de dormir, de trocar de assunto, ao terminar uma fatia | — |
+| **`/situacao`** | Estado do git de **todos** os repositórios (workspace, api, frontend, áreas paralelas, `ai-base`/`ai-infra`/`ai-ops`/`template-ci`): em que branch cada um está e **o que fazer** — commitar, subir, mergear MR, alinhar, apagar branch já mergeada. Termina com "pronto para a próxima fatia? SIM / QUASE / NÃO". Somente leitura (faz `fetch`) | Depois de mergear, antes de cada `/fatia`, ou quando não souber o que ficou solto | Mergear MRs e commitar; limpar é seguro |
 | **`/mapa`** | Confere o mapa de fatias contra tudo que o projeto já definiu (telas dos protótipos, ADRs, `mudancas-*`, pendências, glossário): lista o que está **sem fatia** ou **parcial**, fatias **grandes demais** e inconsistências, e propõe as linhas novas. Somente leitura; `/mapa aplicar` edita depois do seu ok | Ao fim do discovery; quando o `/proximo` avisar que ADR ou protótipo é mais novo que o mapa; antes de começar uma rodada nova | A proposta de mapa |
 | **`/fatia B3`** | Leva a fatia do zero à MR: spec → **[você aprova]** → tickets automáticos → execução → review → MR. Retoma de onde parou se for rodado de novo | Quando o `/proximo` disser que a fatia está livre | A spec; depois a MR |
 | **`/implement-task B3`** | Só a execução (tasks com TDD, suite, `/code-review`, correção, push, MR). Já usado pelo `/fatia` | Spec e tickets prontos; ou para corrigir a MR depois de um comentário seu | A MR |
@@ -85,6 +86,7 @@ O modo é escolha de custo; o processo é o mesmo nos três. Trocar de modo = fe
 | `node .claude/scripts/worktree-fatia.mjs B3 <slug>` | Cria a área isolada da fatia (`<workspace>.wt/b3/`): um painel do Alethe por fatia em paralelo. Depois: `cd` lá e `claude` |
 | `node .claude/scripts/worktree-fatia.mjs --remove B3` | Remove a área ao fim (as branches continuam) |
 | `node .claude/scripts/check-tickets.mjs B3 <spec.md> <grupo>/<projeto>-workspace` | Confere se cada critério da spec virou ticket (o `/fatia` já roda) |
+| `node .claude/scripts/situacao.mjs [--sem-mr] [--so-projeto]` | O que o `/situacao` roda. Exit 1 se há pendência sua (prioridade 1 ou 2) |
 | `node .claude/scripts/check-spec-drift.mjs [<spec>]` | Diz se uma spec **envelheceu** (commits novos em `dev` que tocam o que ela cita; sem linha `base:` = velha). Sem argumento: todas as pendentes. O `/proximo` e o `/fatia` já rodam |
 | `node .claude/scripts/check-spec-drift.mjs --stamp <spec>` | Grava a linha `base:` (sha de `dev` de agora) na spec. O `/fatia` faz ao aprovar |
 | `node .claude/scripts/check-escopo.mjs <repo> <base> --allow … --deny …` | Confere o diff de uma task: fora do escopo, teste apagado, `skip`/`only` (o `/implement-task` já roda) |

@@ -66,6 +66,7 @@ Abra `http://localhost:4200` (nunca direto a porta da API). Reiniciou a infra ou
 | a execução parou (`PAROU`) | [Quando para](#quando-ele-para) |
 | rodar várias fatias ao mesmo tempo | [Paralelismo](#paralelismo) |
 | a spec ficou velha | [Spec velha](#spec-velha) |
+| **saber em que branch cada repositório está e o que commitar, mergear ou apagar** | **[Situação do git](#situação-do-git)** |
 | um agent sugeriu melhorar a infra, o template ou o processo | [Melhorias na orquestração](#melhorias-na-orquestração) |
 | onde está o glossário (`CONTEXT`) e os outros arquivos | [Onde fica cada coisa](#onde-fica-cada-coisa) |
 | ver o estado da Esteira | [Estado da Esteira](#estado-da-esteira) |
@@ -391,6 +392,38 @@ node .claude/scripts/worktree-fatia.mjs --remove B2   # ao terminar
 
 Cada fatia tem a sua spec, o seu review e a sua MR. Acompanhe no board por label `em-execucao` e com `/proximo` num painel livre. A mesma fatia em dois painéis é bloqueada pelo label.
 Detalhe: [orquestração, "Execução paralela"](../ai-base/docs/agents/orchestration.md).
+
+---
+
+# Situação do git
+
+Vários repositórios (workspace, api, frontend, áreas paralelas, `ai-base`/`ai-infra`/`ai-ops`/`template-ci`) e várias branches: é fácil deixar algo solto. Um comando mostra tudo e diz o que fazer:
+
+```
+/situacao
+```
+
+Ele (somente leitura; faz `git fetch`) lista, por repositório, a branch atual e o estado de cada branch (mergeada, com MR aberta, sem MR, nunca enviada) e termina com **O QUE FAZER**, em ordem:
+
+| # | O que é | Quem |
+|---|---|---|
+| 1 | **Commitar / subir:** arquivo alterado e não comitado, commit não enviado, branch nunca enviada, commit local na `dev`/`main` | você |
+| 2 | **Mergear** MR aberta, ou **abrir MR** de branch que está no GitLab sem MR | você, no GitLab |
+| 3 | **Alinhar:** `switch` para `dev`/`main` e `pull --ff-only` | seguro |
+| 4 | **Limpar:** apagar branch **já mergeada** (`git branch -d`, que recusa se não estiver mergeada) | seguro |
+
+E a última linha: **"Pronto para começar a próxima fatia?"** `SIM` · `QUASE` (só alinhar) · `NÃO` (há pendência sua).
+
+**Quando rodar:** depois de mergear uma MR, antes de cada `/fatia`, ou quando não souber o que ficou solto. O `/proximo` avisa quando precisa.
+
+**O que você faz com o resultado:** resolva as prioridades 1 e 2 (são suas). Para 3 e 4, diga ao Claude *"pode alinhar e limpar"*: ele roda só `pull --ff-only` e `branch -d`, **nunca apaga branch remota nem força** sem o seu ok item a item. Branch à frente da base e sem MR (um commit solto) é decisão sua: ele mostra o commit e pergunta se é para entregar ou apagar.
+
+Sem o Claude, o script roda sozinho no PowerShell, da raiz do workspace:
+
+```powershell
+node .claude/scripts/situacao.mjs            # tudo
+node .claude/scripts/situacao.mjs --sem-mr   # sem consultar o GitLab (mais rápido)
+```
 
 ---
 
