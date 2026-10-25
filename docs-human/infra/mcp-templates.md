@@ -71,7 +71,6 @@ Regras fixas:
 
 `.mcp.json` é o mesmo arquivo pras duas ferramentas, mas cada uma decide "ligado/desligado" no seu próprio lugar — mudar um não muda o outro.
 
-- **`pi`:** o `"disabled": true` acima já é suficiente. Pra ligar: tira o campo (ou muda pra `false`) e roda `/reload` dentro da sessão `pi` — ou usa `/mcp enable <nome>` + `/reload`.
 - **Claude Code:** ignora o `"disabled"` do `.mcp.json` — ele nunca leu esse campo. Quem liga/desliga pra ele é `.claude/settings.json`, campo `disabledMcpjsonServers` (lista os nomes desligados) ou `enabledMcpjsonServers: []` (desliga tudo de uma vez). Pra ligar 1 servidor específico: tira o nome dele de `disabledMcpjsonServers`, ou adiciona ele em `enabledMcpjsonServers` se estiver usando a lista de permissão.
 
 ## Fora daqui

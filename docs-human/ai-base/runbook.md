@@ -4,7 +4,7 @@ Sequência única, da máquina limpa até publicado de verdade. Cada passo apont
 
 ## 1. Instalar as ferramentas (uma vez só, por máquina)
 
-`docs-human/comandos-para-rodar.md`, passos 1 a 10: Node/npm/git, `pi.dev`, autenticar Deepseek/GPT-5.6 Luna, Alethe (os 4 painéis), `glab`, testar `pi` no `ai-base`, montar os painéis no Alethe, skills (Matt Pocock, Angular, avoid-ai-design), Playwright via Docker.
+`docs-human/comandos-para-rodar.md`, passos 1 a 10: Node/npm/git, Claude Code + modos `claude-pago`/`claude-free`, chaves Deepseek/GPT-5.6 Luna (OmniRoute), Alethe (os painéis), `glab`, testar o `/implement-task` num workspace, montar os painéis no Alethe, skills (Matt Pocock, Angular, avoid-ai-design), Playwright via Docker.
 
 ## 2. Subir a infra compartilhada local
 
@@ -19,7 +19,7 @@ Sobe na ordem certa, configura todos os projetos do manifesto e termina com `ver
 
 ## 3. Criar o repo do projeto a partir do `ai-base`
 
-Copiar a estrutura do template pro repo novo (`docs/`, `docs-human/`, `.pi/agents/`, `.claude/`, `.gitlab-ci.yml`).
+Copiar a estrutura do template pro repo novo (`docs/`, `docs-human/`, `.claude/`, `.gitlab-ci.yml`).
 
 ## 4. Apontar pra infra compartilhada (nascimento de projeto)
 
@@ -56,7 +56,7 @@ Antes da primeira task com fatia de UI — o `tokens.md` do template (`docs/desi
 
 Nada abaixo precisa de Kubernetes nem AWS — roda tudo local, em cima do que os passos 2-6 já deixaram de pé:
 - Specs viram issues no GitLab (`docs/agents/issue-tracker.md`).
-- `pi` executa via `/implement-task`, um painel do Alethe por spec (`docs/agents/orchestration.md`).
+- O Claude Code executa via `/implement-task` (modo `claude`, `claude-pago` ou `claude-free`), um painel do Alethe por spec (`docs/agents/orchestration.md`).
 - `/code-review` manual (sua sessão Claude Code, seu Pro) antes de cada push de `feature/*`.
 - Esteira dev→qa→hml→main entra em jogo quando você decidir publicar de verdade (setup único no `template-ci/README.md`).
 

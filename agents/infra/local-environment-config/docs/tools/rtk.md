@@ -17,7 +17,6 @@ PATH novo só é lido num terminal novo → **parar aqui**, pedir pro humano fec
 ```powershell
 rtk init -g
 rtk init -g --opencode
-rtk init -g --agent pi
 ```
 
 Confirmar: `rtk init --show` (hook nativo, `RTK.md`, `settings.json`).

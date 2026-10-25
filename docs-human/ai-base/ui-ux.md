@@ -27,7 +27,7 @@ Você já paga por Claude Code/Claude.ai, Deepseek V4 Flash, GPT-5.6 Luna e Goog
 - Todas as skills do Matt Pocock + `avoid-ai-design`.
 - **Skill de Design do Claude Code** (canvas de artboards editável): desenhar wireframe/mockup antes de virar código Angular — substitui o papel que o Figma free-tier faria, sem sair do Claude Code e sem limite de arquivo.
 - **Skill de Dataviz do Claude Code**: decidir paleta/formato/tipo de gráfico antes de implementar com o helm `chart` do spartan.
-- Deepseek V4 Flash / GPT-5.6 Luna via pi.dev.
+- Deepseek V4 Flash / GPT-5.6 Luna via OmniRoute (modo `claude-pago`).
 - spartan/ui, Tailwind, skills oficiais do Angular, anime.js, Motion (API vanilla) — open-source, zero custo.
 - `interfaces.rauno.me` — checklist gratuito.
 

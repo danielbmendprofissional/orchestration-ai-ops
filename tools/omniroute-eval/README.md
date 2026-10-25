@@ -1,10 +1,10 @@
 # omniroute-eval
 
-Ranking empírico dos modelos do OmniRoute pro papel de executor do `pi.dev`. Substitui a ordem estimada dos combos em `ai-infra/configs/omniroute/combos.md` por dado real.
+Ranking empírico dos modelos do OmniRoute pros modos `claude-pago`/`claude-free` do Claude Code (executores e subagentes). Substitui a ordem estimada dos combos em `ai-infra/configs/omniroute/combos.md` por dado real.
 
 ## O que mede
 
-Três tarefas, cada uma testando algo que um subagent do `pi` precisa fazer:
+Três tarefas, cada uma testando algo que um subagente do Claude Code precisa fazer:
 
 | Tarefa | Testa | Passa quando |
 |---|---|---|
@@ -12,7 +12,7 @@ Três tarefas, cada uma testando algo que um subagent do `pi` precisa fazer:
 | `fix-bug` | editar o arquivo certo via `write_file` seguindo uma spec | o código escrito passa num teste oculto |
 | `write-test` | escrever teste que pega bug (TDD) | o teste passa na implementação correta **e** falha em pelo menos 2 de 3 mutantes |
 
-Responder sem usar tool é sempre falha — o `pi` depende de tool call.
+Responder sem usar tool é sempre falha — o Claude Code depende de tool call.
 
 Duas notas por modelo, separadas de propósito:
 - **Qualidade**: pass / (pass + fail), só sobre tentativas que chegaram ao modelo.
@@ -35,7 +35,7 @@ node eval.mjs --base-url=http://localhost:20128/v1 --timeout=180000
 
 Resultado: tabela no terminal + `results/<timestamp>.md` e `.json` (fora do git).
 
-**Custo:** modelos free não custam dinheiro, mas gastam cota diária — rodar fora do horário de trabalho com o `pi`. Os pagos estão comentados em `models.txt`; descomentar só pra ter referência de qualidade (custo real, pequeno: ~6 chamadas curtas por tarefa).
+**Custo:** modelos free não custam dinheiro, mas gastam cota diária — rodar fora do horário de trabalho com os modos pago/free. Os pagos estão comentados em `models.txt`; descomentar só pra ter referência de qualidade (custo real, pequeno: ~6 chamadas curtas por tarefa).
 
 **Rodar sequencial é intencional:** um modelo por vez, pra não confundir 429 do próprio teste com limite real do provider.
 

@@ -15,31 +15,22 @@ Os três precisam responder com um número de versão (não "comando não encont
 
 ---
 
-## 2. Instalar o pi.dev
+## 2. Claude Code e os modos pago/free
 
-**Terminal: "PowerShell" (normal primeiro)**
-
-```powershell
-npm install -g --ignore-scripts @earendil-works/pi-coding-agent
-```
-
-Se der erro de permissão (`EACCES`, `EPERM`, "Access is denied"): feche esse PowerShell, abra de novo como **"PowerShell" clicando com botão direito → "Executar como administrador"**, e rode o mesmo comando só dessa vez. Depois pode voltar a usar o PowerShell normal pra tudo mais.
-
-**Verificar que instalou** (PowerShell normal):
+O Claude Code é a única ferramenta de IA (o `pi.dev` saiu em 2026-10-24). Instalar, se ainda não tiver:
 
 ```powershell
-pi --version
+irm https://claude.ai/install.ps1 | iex
+claude --version
 ```
 
-Precisa mostrar um número de versão (ex: `0.85.1` ou mais novo).
+Os modos `claude-pago` e `claude-free` (o mesmo Claude Code usando os combos do OmniRoute, pra quando o plano apertar) dependem do OmniRoute de pé — quem configura é o agent `local-environment-config` (`docs/enviroment/claude-modos.md`): cria `~/.claude/modos/pago.json` e `free.json` e os atalhos no seu perfil do PowerShell. Depois, num terminal novo:
 
-Depois de `pi --version` confirmar que instalou:
- 
 ```powershell
-pi install npm:pi-mcp-adapter
+claude-pago -p "responda ok"
 ```
- 
-Reinicia o `pi` depois de instalar. Isso é o que faz o `pi` ler o `.mcp.json` de cada projeto (trechos prontos em `configs/desktop/MCP-GLOBAL.md`) — sem essa extensão, `pi` não enxerga MCP nenhum, `/mcp` nem aparece como comando.
+
+Tem que responder e avisar que outra fonte de autenticação tem precedência sobre o login do claude.ai — é a prova de que **não** usou o seu plano.
 
 ---
 
@@ -57,9 +48,9 @@ setx DEEPSEEK_API_KEY "cole-sua-chave-deepseek-aqui"
 setx OPENAI_API_KEY "cole-sua-chave-openai-aqui"
 ```
 
-Importante: `setx` não afeta o PowerShell que já está aberto — **feche essa janela e abra uma nova** depois de rodar isso, senão o `pi` não vai ver as chaves.
+Importante: `setx` não afeta o PowerShell que já está aberto — **feche essa janela e abra uma nova** depois de rodar isso.
 
-Alternativa (se preferir não deixar a chave salva como variável de ambiente do Windows): dentro de uma sessão `pi` aberta, rode `/login deepseek` e `/login openai` — ele guarda em `~/.pi/agent/auth.json`, também permanente, sem precisar de `setx`.
+Quem usa essas chaves é o OmniRoute (modos `claude-pago`/`claude-free`): elas também entram no `ai-infra/container/.env` (`ai-infra/configs/omniroute/README.md`).
 
 ---
 
@@ -93,33 +84,34 @@ Escolha `gitlab.com`, depois "Login with a web browser" (ou "Token" se preferir 
 
 ---
 
-## 6. Testar tudo junto: rodar uma sessão `pi` no repo
+## 6. Testar tudo junto: uma sessão no workspace
 
-**Terminal: "PowerShell" (normal)**
+**Terminal: "PowerShell" (normal)**, na raiz de um workspace (ex.: `ai-pipeline\esteira`):
 
 ```powershell
-cd "C:\Users\danib\source\repos\orquestracao-ai\ai-base"
-pi
+claude
 ```
 
-Se abrir a interface do `pi` sem erro, deu tudo certo. Digite `/model` pra confirmar que `deepseek-v4-flash` e `gpt-5.6-luna` aparecem na lista (prova que a autenticação do passo 3 funcionou). Saia com `Ctrl+C` duas vezes ou `/exit`.
+Digite `/imp` + Tab: tem que aparecer `implement-task`. `/agents` lista os subagentes do projeto (`data`, `backend`, `front`, `ui`, `tests`, `security`, `review`, `qa`). Saia com `/exit`.
 
 ---
 
-## 7. Montar os 4 painéis no Alethe
+## 7. Montar os painéis no Alethe
 
 **Dentro do app Alethe (não é terminal solto)**
 
 1. Abra o Alethe.
-2. Crie um layout de grid com 4 painéis (a opção fica no menu de layout — "grid" ou "custom grid", 2x2).
-3. Em cada painel, rode:
+2. Crie um layout de grid (2x2, por exemplo) — um painel por spec que vai rodar em paralelo.
+3. Em cada painel, na raiz do workspace, abra o modo que quiser:
 
 ```powershell
-cd "C:\Users\danib\source\repos\orquestracao-ai\ai-base"
-pi
+cd "C:\Users\danib\source\repos\orquestracao-ai\ai-pipeline\<projeto>"
+claude          # seu plano
+claude-pago     # OmniRoute, DeepSeek → Luna
+claude-free     # OmniRoute, só gratuitos
 ```
 
-Cada painel agora é uma sessão `pi` independente. Quando você tiver 4 specs prontas (fechadas por mim/Claude Code), abre uma branch de feature pra cada uma (`git checkout -b feature/<feature>/<spec>`) num painel diferente e usa `/implement-task <descrição da task>` — ver `docs/agents/orchestration.md` pros comandos de dentro da sessão `pi`.
+Cada painel é uma sessão independente. Com specs prontas e desbloqueadas no mapa (`specs/README.md`), rode `/implement-task` (ou `/implement-task #<issue-mãe>`) em painéis diferentes — a branch de feature ele mesmo cria. Ver `docs/agents/orchestration.md`.
 
 ---
 
@@ -225,7 +217,7 @@ docker pull mcr.microsoft.com/playwright:v1.48.0-noble
 docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.48.0-noble npx playwright test
 ```
 
-O agente `qa` (`.pi/agents/qa.md`) usa esse mesmo `docker run` por baixo quando roda via `bash` — não precisa de Playwright instalado fora do container.
+O agente `qa` (`.claude/agents/qa.md`) usa esse mesmo `docker run` por baixo quando roda via `bash` — não precisa de Playwright instalado fora do container.
 
 ## 11. Nascimento de projeto novo — apontar pra infra compartilhada
 

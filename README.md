@@ -18,7 +18,6 @@ ai-ops/
       <nome-do-agent>/
         README.md      → o que o agent faz, como rodar, o que ele NÃO faz
         CLAUDE.md       → (se o agent roda em Claude Code) instrução carregada automaticamente
-        ...             → (se o agent roda em pi.dev) frontmatter próprio, ver convenção do pi
 ```
 
 Cada pasta de agent tem seu próprio `README.md` — este arquivo aqui é só o índice, não descreve o funcionamento de agent nenhum.
@@ -38,4 +37,4 @@ Scripts de apoio que não são agents — rodados pelo humano.
 
 | Ferramenta | O que faz | Onde |
 |---|---|---|
-| `omniroute-eval` | Ranking empírico dos modelos do OmniRoute pro papel de executor do `pi` (tool calling, edição, escrita de teste) | `tools/omniroute-eval/` |
+| `omniroute-eval` | Ranking empírico dos modelos do OmniRoute pros modos `claude-pago`/`claude-free` (tool calling, edição, escrita de teste) | `tools/omniroute-eval/` |

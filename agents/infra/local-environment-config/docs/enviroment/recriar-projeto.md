@@ -21,8 +21,8 @@ Montar e mostrar ao humano esta tabela antes de qualquer plano:
 |---|---|
 | **Layout** | `workspace` (tem `<projeto>-api/`/`-frontend/` com `.git` próprio), `monorepo` (um `.git` na raiz, código em pastas como `backend/`, `frontend/`, `src/`), `componente-unico` (o repo é só a API ou só o front) |
 | **Componentes de código** | `*.sln`/`*.slnx`/`*.csproj` (.NET, caminho do csproj da API), `angular.json` (Angular), `package.json`, outros. Caminho de cada um |
-| **Origem do ambiente de IA** | `ai-base-atual` (`CLAUDE.md` com a seção "Papéis fixos das ferramentas" e `docs/agents/infra-local.md` com "Contrato de configuração"), `ai-base-antigo` (tem `CLAUDE.md`/`.pi/agents`/`docs/agents`, mas sem o contrato), `nenhum` (sem `CLAUDE.md` nem `.pi/`) |
-| **Arquivos de IA presentes** | `CLAUDE.md` (raiz e por componente), `.claude/` (hooks, settings, skills), `.pi/agents/`, `docs/agents/`, `docs/design/`, `DESIGN.md`, `.mcp.json`, `skills-lock.json`, `CONTEXT.md`/`CONTEXT-MAP.md`, `docs/adr/`, `specs/` |
+| **Origem do ambiente de IA** | `ai-base-atual` (`CLAUDE.md` com a seção "Papéis fixos das ferramentas" e `docs/agents/infra-local.md` com "Contrato de configuração"), `ai-base-antigo` (tem `CLAUDE.md`/`.pi/agents` ou `.claude/agents`/`docs/agents`, mas sem o contrato — `.pi/` de pi.dev antigo é removido na recriação), `nenhum` (sem `CLAUDE.md` nem `.claude/agents/`) |
+| **Arquivos de IA presentes** | `CLAUDE.md` (raiz e por componente), `.claude/` (hooks, settings, skills, agents, commands), `docs/agents/`, `docs/design/`, `DESIGN.md`, `.mcp.json`, `skills-lock.json`, `CONTEXT.md`/`CONTEXT-MAP.md`, `docs/adr/`, `specs/` |
 | **Infra que o código usa hoje** | `appsettings*.json`, `launchSettings.json`, `docker-compose*.yml` e `.env` do próprio projeto, `proxy.conf.json`. Pra cada serviço: host/porta, usuário (superusuário? `guest`? `postgres`?), banco/vhost/realm/client, prefixo Redis, porta do `/metrics`. **Senha versionada: reportar só "senha em `<arquivo>:<linha>`", nunca o valor** |
 | **Observabilidade no código** | `/health` (HealthChecks), `/metrics` (`prometheus-net`), Serilog JSON, exportador OTLP |
 | **Esteira** | `.gitlab-ci.yml` de cada repositório: `include` do template-ci e `ref` |
@@ -37,7 +37,7 @@ Clonar o `ai-base` atual numa pasta temporária, read-only (`git clone --depth 1
 ### Bloco A — ambiente de IA (arquivos de processo)
 
 Escopo e regras de comparação (iguais pra qualquer origem):
-- `docs/agents/*.md`, `.claude/hooks/`, `.pi/agents/*.md`, `.pi/extensions/`, `docs/design/*.md` — processo fixo, sem motivo pra divergir do template. Exceções: `tokens.md` sai do diff se existir `DESIGN.md`; campo `model:` de `.pi/agents` diferente é sempre "Depende do humano" (custo).
+- `docs/agents/*.md`, `.claude/hooks/`, `.claude/agents/*.md`, `.claude/commands/`, `docs/design/*.md` — processo fixo, sem motivo pra divergir do template. Exceções: `tokens.md` sai do diff se existir `DESIGN.md`; campo `model:` de `.claude/agents` diferente é sempre "Depende do humano" (custo).
 - **Nunca compara:** código, `CONTEXT.md`, `docs/adr/` existentes, `specs/` existentes, `.claude/skills/` (instala por comando, passo 3 dos "Passos"), `.mcp.json` (passo 2 dos "Passos").
 - `templates/*.gitlab-ci.yml` vs `.gitlab-ci.yml` de cada repositório: só `include` (`project`/`ref`) e variáveis fixas.
 

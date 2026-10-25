@@ -21,14 +21,14 @@ Exemplo usado: `<projeto>` = `esteira` (primeiro projeto criado seguindo este gu
 ── daqui em diante, fatia a fatia ──
 9. spec       → /to-spec  → issue-mãe       (Claude Code)
 10. tickets   → /to-tickets → issues filhas (Claude Code)
-11. execução  → pi /implement-task          (pi.dev + OmniRoute, um painel do Alethe por spec)
+11. execução  → /implement-task             (Claude Code + subagentes, um painel do Alethe por spec)
 12. review    → /code-review → push → MR    (Claude Code, depois CI)
 13. esteira   → tag vX.Y.Z-rcN → qa → hml → main
 ```
 
 **Projeto que já existe** (nascido de um `ai-base` antigo, ou aplicação que nunca teve ambiente de IA): pule os passos 1 e 2 e faça o passo 3 com o caminho do projeto — o agent **recria o ambiente** em volta do código existente:
 
-- traz `docs/agents`, hooks e `.pi/agents` do `ai-base` atual, adaptados ao layout que o projeto já tem (monorepo continua monorepo — conversão pra workspace só se você pedir);
+- traz `docs/agents` e `.claude/` (hooks, agents, commands) do `ai-base` atual, adaptados ao layout que o projeto já tem (monorepo continua monorepo — conversão pra workspace só se você pedir);
 - cria a casa do projeto na infra compartilhada (banco novo vazio — dado antigo não migra sozinho; o relatório traz o `pg_dump`/`pg_restore` se você quiser);
 - **não mexe em código**: o que o código precisa mudar (connection string fora do contrato, senha versionada, `/health`, `/metrics`, log) vira a spec `specs/feature/infra/00-adequacao-ambiente.md` + uma issue `needs-triage`, que segue o fluxo normal a partir do passo 10 (tickets).
 
@@ -40,13 +40,14 @@ Rodar de novo depois é seguro: ele só aponta o que o template mudou desde a ú
 
 Não se repete por projeto. Se já fez, pule.
 
-- Ferramentas (Node, git, `pi`, Alethe, `glab`, Playwright via Docker): `ai-ops/docs-human/ai-base/comandos-para-rodar.md`, passos 1–7 e 10.
+- Ferramentas (Node, git, Claude Code, Alethe, `glab`, Playwright via Docker): `ai-ops/docs-human/ai-base/comandos-para-rodar.md`, passos 1–7 e 10.
 - Infra compartilhada no ar: `container\.env` preenchido com os logins de admin (modelo em `ai-infra\container\examples\env.example`), depois `cd ai-infra\configs\infra` → `node infra-config.mjs up`. Termina com `✔ tudo conferido` (saúde + muros entre projetos). Nunca `docker compose up` puro. Detalhe: `ai-infra/configs/infra/README.md`.
 - Versão das imagens: fixa no compose; atualizar só pelo agent `ai-ops/agents/infra/infra-versions-config`.
-- OmniRoute (gateway de modelos do `pi`) configurado: `cd ai-infra\configs\omniroute` → `node omniroute-config.mjs diff` (limpo = ok) → `apply` se precisar. Sem OmniRoute o `pi` fica sem modelo.
+- OmniRoute (gateway dos modos `claude-pago`/`claude-free`) configurado: `cd ai-infra\configs\omniroute` → `node omniroute-config.mjs diff` (limpo = ok) → `apply` se precisar. Sem OmniRoute só o modo `claude` (plano) funciona.
+- Modos do Claude Code: `~/.claude/modos/pago.json`/`free.json` e os atalhos `claude-pago`/`claude-free` no perfil do PowerShell (`ai-ops/agents/infra/local-environment-config/docs/enviroment/claude-modos.md`).
 - `GITLAB_TOKEN` definido no Windows (variável de usuário) — usado pelo `glab` e pelo MCP do GitLab.
 
-**Pronto quando:** `glab auth status` mostra logado, `pi` abre e `/model` lista os combos `omniroute/pi-exec`, `pi-light`, `pi-quality`.
+**Pronto quando:** `glab auth status` mostra logado, `claude` abre, e `claude-pago -p "responda ok"` responde com o log do OmniRoute mostrando `deepseek/deepseek-v4-flash succeeded`.
 
 ## 1. GitLab: grupo e repositórios
 
@@ -69,7 +70,7 @@ glab api -X POST projects -f name=<projeto>-frontend  -f namespace_id=<id-do-gru
 
 ## 2. Workspace local a partir do ai-base
 
-O workspace é o `ai-base` copiado (só arquivos versionados) — regras, `.claude/`, `.pi/`, `docs/`. O código mora nos repositórios de componente, dentro dele, ignorados pelo `.gitignore`.
+O workspace é o `ai-base` copiado (só arquivos versionados) — regras, `.claude/`, `docs/`. O código mora nos repositórios de componente, dentro dele, ignorados pelo `.gitignore`.
 
 ```powershell
 cd <pasta-pai>                                   # ex: ...\orquestracao-ai\ai-pipeline
@@ -186,7 +187,7 @@ Toda decisão que vale além de uma fatia (padrão de API, autenticação, stack
 
 ## 7. Bootstrap dos repositórios de código
 
-Feito pelo **Claude Code** (não pelo `pi`), direto de `docs/agents/padrao-frontend.md`/`padrao-api.md` + ADRs do projeto, **sem spec formal nem tickets**: é fundação, não tem regra de negócio pra virar EARS. O "pronto quando" abaixo é o checklist. Vem antes do design system porque o tema é código (`@theme` do Tailwind + variáveis do helm do spartan no `src/styles.css`) e o `impeccable` valida contra o app rodando.
+Feito pelo **Claude Code** (sessão normal, sem `/implement-task`), direto de `docs/agents/padrao-frontend.md`/`padrao-api.md` + ADRs do projeto, **sem spec formal nem tickets**: é fundação, não tem regra de negócio pra virar EARS. O "pronto quando" abaixo é o checklist. Vem antes do design system porque o tema é código (`@theme` do Tailwind + variáveis do helm do spartan no `src/styles.css`) e o `impeccable` valida contra o app rodando.
 
 - **Frontend:** `ng new` na versão estável, Tailwind 4 + spartan/ui (`@spartan-ng/cli:init`, helm em `src/app/shared/ui`), Vitest + Playwright + axe, estrutura de `padrao-frontend.md`, `core/config` lendo `/config.json`, `proxy.conf.json` de `/api`, `nginx/` copiado de `template-ci/examples/angular/nginx`, `.gitlab-ci.yml` copiado de `ai-base/templates/frontend.gitlab-ci.yml` (`ANGULAR_DIST_PATH`, `TEST_COMMAND`), `public/config.json` de dev, `package-lock.json` commitado, `<projeto>-frontend/CLAUDE.md` com a stack.
 - **API:** `.gitlab-ci.yml` de `ai-base/templates/api.gitlab-ci.yml`, `/health`, `/metrics`, log JSON + OTLP (`ai-base/docs/agents/observabilidade-backup.md`), configuração só pelas chaves do contrato (`ai-base/docs/agents/infra-local.md`, via user-secrets em dev), porta do `/metrics` no campo `metrics` do projeto em `ai-infra/configs/infra/projects.json`.
@@ -239,50 +240,53 @@ Fatia = entrega fina **ponta a ponta**, nunca "só o backend". Exceção: fatias
 /to-tickets
 ```
 
-Quebra a spec em issues filhas (labels `backend`/`frontend` + `ready-for-agent`), cada uma declarando o que bloqueia e o que é bloqueado. Labels: `docs/agents/triage-labels.md`.
+Quebra a spec em tickets e mostra a quebra pra você aprovar. Publica cada um como **Task filha da issue-mãe** (aparece em "Child items" da mãe), com label de área + `ready-for-agent` e `Blocked by:` no topo. Como: `docs/agents/issue-tracker.md` ("Tickets de uma spec"); labels: `docs/agents/triage-labels.md`.
 
 **Pronto quando:** as issues estão no GitLab com dependências e a primeira está desbloqueada.
 
-## 11. Execução — `pi` + OmniRoute
+## 11. Execução — `/implement-task` (Claude Code)
 
-Uma sessão `pi` por spec (um painel do Alethe cada, em paralelo se quiser), **na raiz do workspace**:
+Uma sessão por spec (um painel do Alethe cada, em paralelo se quiser), **sempre na raiz do workspace** — de lá ela enxerga `<projeto>-api/` e `<projeto>-frontend/`. Escolha o modo ao abrir (`docs/agents/orchestration.md`):
 
 ```powershell
 cd <workspace>
-git -C <projeto>-frontend switch -c feature/<n>-<nome-curto> dev   # mesma branch em cada repositório tocado
-pi
+claude          # seu plano (padrão)
+claude-pago     # quando o plano apertar: OmniRoute, DeepSeek → Luna
+claude-free     # último recurso: combos gratuitos
 ```
 
+**Qual spec rodar:** o mapa, `specs/README.md` — pode rodar a que tem todas as dependências feitas (mergeadas em `dev`). Você passa o número da **spec** (issue-mãe); as filhas ele acha e ordena pelo `Blocked by`.
+
 ```
-/implement-task Implementar a issue <grupo>/<projeto>-workspace#<n> — spec specs/feature/<área>/NN-nome.md
+/implement-task                     # a próxima spec desbloqueada do mapa (ele diz qual escolheu)
+/implement-task #<issue-mãe>        # uma spec específica: todas as filhas, em ordem
+/implement-task #<filha>            # uma task só (ex.: refazer depois de FAIL)
 ```
 
-O `pi` é o agente-pai e encadeia os subagents (`.pi/agents/*.md`): `data` → `backend` → `front` → `ui` → `tests` → `security` → `review`, pulando os que não se aplicam (nunca pula `tests`/`security`/`review`). Cada um usa um combo do OmniRoute (`docs/agents/orchestration.md`).
+A sessão é o agente-pai: lê issue e spec pelo `glab`, cria (ou retoma) a branch `feature/<mãe>-<slug>` a partir de `origin/dev` em cada repositório que a spec toca, e implementa task a task com TDD. **Modo `claude`:** o próprio pai implementa (rápido; o `/code-review` no fim revisa tudo). **Modo pago/free:** delega cada task a um subagente executor com o `$TASK` autocontido, e um `review` por task. Nos dois: testes da task com filtro, **suite completa uma vez por task** antes do commit, escopo conferido com `git diff --stat`, uma filha por commit, **sem push**. Spec bloqueada → para e diz por quem.
 
-O que observar (é o teste da orquestração):
-- cada subagent devolve **Completado / Arquivos alterados / Suposições / Para o pai**;
-- `tests` escreve o teste **antes** e ele fica congelado — se alguém mexer em asserção pra passar, é bloqueio;
-- `review` reprova → o pai corrige; reprovou de novo → ele **reporta**, não fica tentando modelo até passar;
-- OmniRoute fora → o `pi` para; contingência é trocar o `model:` só localmente.
+O que observar:
+- cada subagente devolve **Completado / Arquivos alterados / Suposições / Para o pai**;
+- teste escrito **antes** do código e congelado — asserção afrouxada pra passar é FAIL;
+- `review` reprova → o pai reabre o executor uma vez; reprovou de novo → **reporta**;
+- modo pago/free sem resposta → OmniRoute fora (`node omniroute-config.mjs diff` no `ai-infra`).
 
-**Pronto quando:** `review` dá PASS e o pai faz commit na branch de feature.
+**Pronto quando:** todas as filhas com `review` PASS e commitadas na branch de feature.
 
 ## 12. Review — `/code-review` → push → MR
 
-Numa sessão **interativa** do Claude Code (nunca headless/CI), na raiz do workspace:
+Na mesma sessão ou numa nova, interativa (nunca headless/CI):
 
 ```
 /code-review
 ```
 
-Avalia o diff contra os padrões do repositório e contra a spec (inclui o diff dos testes). Diff com UI → também `/skill:avoid-ai-design detect`; superfície sensível → skills de segurança (`docs/agents/security-review.md`). PASS grava `<projeto>-frontend/.pi/code-review-ok.json` com o sha.
+Avalia o diff da branch contra os padrões do repositório e contra a spec (inclui o diff dos testes). Diff com UI → também `/skill:avoid-ai-design detect`; superfície sensível → skills de segurança (`docs/agents/security-review.md`).
 
-```powershell
-git -C <projeto>-frontend add -A; git -C <projeto>-frontend commit -m "..."
-git -C <projeto>-frontend push -u origin feature/<n>-<nome-curto>
-```
+- **FAIL:** `/implement-task #<filha> — corrigir: <achados>`, mesma branch.
+- **PASS:** o Claude Code fecha a entrega (`docs/agents/orchestration.md`): grava e comita `.code-review-ok.json` em cada repositório alterado, faz push da branch de feature e abre a MR pra `dev` com `Closes <grupo>/<projeto>-workspace#<mãe>` (e as filhas). Com o gate do template-ci ligado no repositório, a MR é aberta pelo CI.
 
-O CI (`verify-code-review`) confere o sha e **abre a MR pra `dev` sozinho**. A MR fecha a issue com `Closes <grupo>/<projeto>-workspace#<n>`. Você aprova o merge.
+Você aprova o merge. Depois: fechar a fatia (`specs/README.md`, `docs/workflow.md`).
 
 ## 13. Esteira — tag e promoção
 
@@ -299,11 +303,10 @@ Os passos 0–4 se fazem **uma vez por projeto**. Daqui pra frente, todo trabalh
 | Quem | Papel | Onde |
 |---|---|---|
 | **Você** | Decide, aprova e valida. É o único que aprova spec, merge e design | — |
-| **Claude Code** | Pensa: discovery, arquitetura, ADR, spec, tickets, bootstrap, design system, review | `claude` na raiz do workspace |
-| **`pi` (agente-pai)** | Executa uma spec: encadeia os subagents, commita na branch de feature | `pi` na raiz do workspace, um painel do Alethe por spec |
-| **Subagents** | `data`, `backend`, `front`, `ui`, `tests`, `security`, `review`, cada um num combo do OmniRoute | chamados pelo `pi`, nunca por você |
+| **Claude Code** | Pensa e executa: discovery, arquitetura, ADR, spec, tickets, bootstrap, design system; na execução (`/implement-task`) é o agente-pai; depois o `/code-review` | `claude`/`claude-pago`/`claude-free` na raiz do workspace, um painel do Alethe por spec |
+| **Subagentes** | `data`, `backend`, `front`, `ui`, `tests`, `security`, `review` (`.claude/agents/`), contexto limpo por task | chamados pelo `/implement-task`, nunca por você |
 
-Regra prática: **se exige julgamento, é Claude Code; se é mecânico com contrato fechado, é `pi`**.
+Regra prática: **o modo é escolha de custo, não de papel** — o processo é o mesmo em `claude`, `claude-pago` e `claude-free`.
 
 ## Quanto especificar de uma vez
 
@@ -328,9 +331,9 @@ Só o **mapa** nasce inteiro. Spec, tickets e testes nascem na hora em que vão 
  │  3. Spec              /to-spec <fatia>                            │
  │     ✋ VOCÊ: lê cada EARS e aprova                                ─┘
  │  4. Tickets           /to-tickets  → issues no GitLab
- │     ✋ VOCÊ: confere dependências e o "ready-for-agent"
- │  5. Branch            git -C <repo> switch -c feature/<n>-<nome> dev
- │  6. Execução          pi → /implement-task ...       pi + subagents
+ │     ✋ VOCÊ: confere os Child items e o "Blocked by"  
+ │  5. Branch            (o /implement-task cria: feature/<mãe>-<slug>)
+ │  6. Execução          /implement-task #<mãe>        Claude + subagentes
  │     ✋ VOCÊ: acompanha o painel; lê o "Para o pai" de cada hop
  │  7. Ver funcionando   ng serve / dotnet run, abrir no navegador
  │     ✋ VOCÊ: testa o fluxo da spec na mão
@@ -368,32 +371,30 @@ Ele pesquisa sozinho e pergunta só o que falta (passo 9). Fatia que ainda é id
 /to-tickets specs/feature/<área>/NN-nome.md
 ```
 
-Confira no GitLab: uma issue por fatia vertical fina, `blocks`/`blocked by` corretos, label de área e `ready-for-agent` só na que está desbloqueada.
+Confira no GitLab: as tasks aparecem em "Child items" da issue-mãe, `Blocked by:` correto em cada uma, label de área e `ready-for-agent` em todas (a label diz "aprovada pra agente"; a ordem quem dá é o `Blocked by:`).
 
-### 5–6. Execução (pi)
+### 5–6. Execução (Claude Code)
 
 ```powershell
 cd <workspace>
-git -C <projeto>-frontend switch -c feature/<n>-<nome-curto> dev
-pi
+claude        # ou claude-pago / claude-free
 ```
 
 ```
-/implement-task Implementar <grupo>/<projeto>-workspace#<n>. Spec: specs/feature/<área>/NN-nome.md.
-Leia o "Contexto necessário" da spec antes de começar.
+/implement-task                     # próxima spec desbloqueada do mapa; ou #<issue-mãe> pra escolher
 ```
 
-O que observar em cada hop, e o que fazer:
+Ele lê issue e spec, cria a branch e comita cada filha (passo 11). O que observar em cada hop, e o que fazer:
 
 | Sinal | O que significa | O que você faz |
 |---|---|---|
-| hop devolve Completado / Arquivos / Suposições / Para o pai | normal | lê as **Suposições**: suposição errada é a origem da maioria dos retrabalhos |
+| subagente devolve Completado / Arquivos / Suposições / Para o pai | normal | lê as **Suposições**: suposição errada é a origem da maioria dos retrabalhos |
 | `tests` escreve teste antes do código | TDD funcionando | — |
 | asserção afrouxada, `skip`, teste comentado | quebra da regra | interrompe; isso é FAIL mesmo que o `review` deixe passar |
-| `review` FAIL uma vez | normal | deixa o pai reabrir o hop |
+| `review` FAIL uma vez | normal | deixa o pai reabrir o executor |
 | `review` FAIL de novo | spec ou contrato ambíguo | **para**; volta pro Claude Code e corrige a spec, não o agente |
 | subagent "inventou" contrato de API | falta contrato | registra no ticket; nunca aceite formato inventado |
-| `pi` sem modelo | OmniRoute fora | `node omniroute-config.mjs diff` no `ai-infra` |
+| `claude-pago`/`claude-free` sem resposta | OmniRoute fora | `node omniroute-config.mjs diff` no `ai-infra` |
 
 ### 7. Ver funcionando
 
@@ -421,31 +422,27 @@ Com o app rodando, no Claude Code:
 /code-review
 ```
 
-Dois eixos em paralelo: padrão do repositório (ADRs, `CLAUDE.md` do componente) e conformidade com a spec, incluindo o diff dos testes. Superfície sensível (auth, sessão, segredo, dependência nova) → `/security-review` também. PASS grava `<repo>/.pi/code-review-ok.json`.
+Dois eixos em paralelo: padrão do repositório (ADRs, `CLAUDE.md` do componente) e conformidade com a spec, incluindo o diff dos testes. Superfície sensível (auth, sessão, segredo, dependência nova) → `/security-review` também. FAIL → `/implement-task #<filha> — corrigir: <achados>` na mesma branch.
 
 ### 10. Entrega
 
-```powershell
-git -C <projeto>-frontend push -u origin feature/<n>-<nome-curto>
-```
-
-- Com o template-ci ligado: o job `verify-code-review` confere o sha e abre a MR pra `dev`.
-- **Sem template-ci (fase de testes):** abra a MR na mão: `glab mr create -R <grupo>/<projeto>-frontend --source-branch feature/<n>-<nome-curto> --target-branch dev --title "..." --description "Closes <grupo>/<projeto>-workspace#<n>"`.
+- PASS no `/code-review` → o próprio Claude Code grava a prova, faz push da branch e abre a MR pra `dev` (sem template-ci) — você não roda git nenhum.
+- Com o template-ci ligado: o job `verify-code-review` confere a prova e quem abre a MR é o CI.
 - Você aprova o merge. Publicação (tags/qa/hml/prod) é o passo 13 e só entra quando você decidir.
 
 ### 11. Retro
 
-Depois de cada fatia, nos primeiros projetos sempre: `/retro`. O que falhou vira ajuste **no lugar certo**: regra de processo → `ai-base`; prompt de subagent → `.pi/agents/*.md` (e depois no `ai-base`); decisão do projeto → ADR. Nunca corrigir só "na conversa".
+Depois de cada fatia, nos primeiros projetos sempre: `/retro`. O que falhou vira ajuste **no lugar certo**: regra de processo → `ai-base`; prompt de subagente → `.claude/agents/*.md` (e depois no `ai-base`); decisão do projeto → ADR. Nunca corrigir só "na conversa".
 
 ## Paralelismo
 
-Specs sem dependência entre si rodam ao mesmo tempo, uma sessão `pi` por spec no Alethe, cada uma na sua branch. Você continua sendo o gargalo das aprovações. Comece com uma de cada vez até confiar nos sinais da tabela acima.
+Specs sem dependência entre si rodam ao mesmo tempo, uma sessão do Claude Code por spec no Alethe, cada uma na sua branch. Você continua sendo o gargalo das aprovações. Comece com uma de cada vez até confiar nos sinais da tabela acima.
 
 ---
 
 # Parte 3 — Primeira rodada da Esteira: frontend
 
-Objetivo desta rodada: **testar o processo** (grill, arquitetura, orquestração `pi`, review, design) construindo o frontend. Sem template-ci, sem publicação.
+Objetivo desta rodada: **testar o processo** (grill, arquitetura, orquestração com subagentes, review, design) construindo o frontend. Sem template-ci, sem publicação.
 
 Material que já existe no workspace (`ai-pipeline/esteira/`):
 - `docs/adr/0001`–`0007`: decisões tomadas (paginação, erros, BFF, stack e arquitetura do front, config em runtime, cadastro de aplicações).
@@ -458,10 +455,10 @@ Ordem:
 |---|---|---|---|
 | 1 | **F0 — Bootstrap do frontend** (fundação, passo 7) | Claude Code | sem spec: direto das ADRs; Claude faz `ng new` (Angular 22, zoneless, Vitest, spartan/ui, Tailwind 4, estrutura da ADR-0005, `public/config.json`, `proxy.conf.json` pra `/api`, `esteira-frontend/CLAUDE.md`) |
 | 2 | **D0 — Design system** (fundação, passo 8) | Claude Code + `impeccable` | `/impeccable init` com a direção de `docs/referencias/visual/` (maduro, nível GitLab; as telas do TCE são só referência funcional); tokens no `src/styles.css` (`@theme` + variáveis do spartan); uma página de amostra pra você aprovar |
-| 3 | **F0.5 — Shell + sessão** | `pi` (`front`, `ui`, `tests`, `security`, `review`) | **primeira orquestração**: layout (sidebar + header da tela 01), `auth.service`, guards, interceptors de sessão e erro |
-| 4 | **F1 — Lista e criação de fluxo** | `pi` | spec com EARS de domínio; smart/dumb; tabela paginada (ADR-0002) |
-| 5 | **F2 — Detalhe + steps-bar + rotas por etapa** | `pi` | componente dumb puro, serviço com escopo de rota |
-| 6 | **F3 — Deploys, análises e modal de artefatos** | `pi` | densidade de dashboard, design das severidades |
+| 3 | **F0.5 — Shell + sessão** | `/implement-task` (`front`, `ui`, `review`) | **primeira orquestração**: layout (sidebar + header da tela 01), `auth.service`, guards, interceptors de sessão e erro |
+| 4 | **F1 — Lista e criação de fluxo** | `/implement-task` | spec com EARS de domínio; smart/dumb; tabela paginada (ADR-0002) |
+| 5 | **F2 — Detalhe + steps-bar + rotas por etapa** | `/implement-task` | componente dumb puro, serviço com escopo de rota |
+| 6 | **F3 — Deploys, análises e modal de artefatos** | `/implement-task` | densidade de dashboard, design das severidades |
 
 **Uma decisão de mapa (se o discovery não fechou):** as fatias B1–B3 (paginação, erros, sessão BFF na `esteira-api`) ainda não existem. Pra não travar o frontend: (a) o front roda contra **fixtures/mock em dev** que já seguem o contrato das ADRs, e troca pra API real quando B1–B3 entrarem; ou (b) faz B1–B3 primeiro, em paralelo com a fundação (bom teste do subagent `backend`). Recomendação: **(b) em paralelo**, e mock só onde a API ainda não chegou.
 
@@ -478,7 +475,7 @@ direto das ADR-0005 e ADR-0006. Sem spec formal: o checklist é o "Pronto quando
 Leia antes: CONTEXT-MAP.md, docs/adr/, docs/referencias/. Me mostre o plano antes de rodar o ng new.
 ```
 
-Depois, na mesma sessão, o design system (passo 8) e a página de amostra para você aprovar. Só então começam as specs: F0.5 primeiro (primeira orquestração pelo `pi`).
+Depois, na mesma sessão, o design system (passo 8) e a página de amostra para você aprovar. Só então começam as specs: F0.5 primeiro (primeira orquestração com `/implement-task`).
 
 ---
 
@@ -486,11 +483,11 @@ Depois, na mesma sessão, o design system (passo 8) e a página de amostra para 
 
 | Passo | Estado |
 |---|---|
-| 0 | ok (infra, `pi`, OmniRoute, `glab`) |
+| 0 | ok (infra, Claude Code + modos, OmniRoute, `glab`; `pi.dev` removido em 2026-10-24) |
 | 1 | ok — `esteira-workspace`, `esteira-api`, `esteira-frontend` no grupo `orchestration-ai/ai-pipeline/esteira` |
 | 2 | ok — workspace em `ai-pipeline/esteira/`, publicado em `main` (remote HTTPS) |
 | 3 | infra criada (manifesto, `verify` verde): banco `esteira` (`esteira_owner`/`esteira_app`), vhost `esteira`, Redis `esteira:*`, realm `esteira` + client `esteira-api` + usuário `dev`, `/metrics` na 5105. Código adequado ao contrato na fatia 00 (mergeada em `dev` da `esteira-api`) |
-| 4 | ok — skills instaladas no workspace (`.claude/skills`, `impeccable` em `.pi/skills`); MCP do GitLab conectado |
+| 4 | ok — skills instaladas no workspace (`.claude/skills`, `impeccable`); MCP do GitLab conectado |
 | 6 | ADRs 0001–0016 (0015: spartan/ui no lugar do PrimeNG); referências do TCE em `docs/referencias/tce-fluxo-deploy/` |
 | 7 | F0 (frontend) mergeada em `dev`; M0 (API) mergeada em `dev` |
 | 8 | D0 feito (`DESIGN.md`, `PRODUCT.md`, tokens no `styles.css`, protótipos em `docs/design/prototipos/`). **Falta:** mergear `feature/d0-tema` (frontend) em `dev` e `docs/d0-prototipos` (workspace) em `main` |

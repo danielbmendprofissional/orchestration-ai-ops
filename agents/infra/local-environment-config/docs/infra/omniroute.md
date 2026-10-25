@@ -1,10 +1,10 @@
-# OmniRoute (gateway de LLM do `pi`) — procedimento do agente
+# OmniRoute (gateway de LLM dos modos `claude-pago`/`claude-free`) — procedimento do agente
 
-OmniRoute é o gateway OpenAI-compatible que fica na frente de todos os modelos executores: os subagents do `pi` apontam pra combos dele (`omniroute/pi-exec`, `omniroute/pi-light`, `omniroute/pi-quality`), nunca pra provider direto. Serviço `omniroute` em `ai-infra/container/docker-compose.yml`.
+OmniRoute é o gateway (OpenAI e Anthropic-compatible) que fica na frente dos modelos que não são a assinatura do Claude: nos modos `claude-pago`/`claude-free`, o Claude Code usa combos dele (`pi-code`, `pi-quality`, `pi-exec`, `pi-light` — nomes históricos), nunca provider direto. Serviço `omniroute` em `ai-infra/container/docker-compose.yml`.
 
 **Configuração é código:** tudo (providers, combos, settings, keys) vive em `ai-infra/configs/omniroute/config/*.json` (git, sem segredo) + `ai-infra/container/.env` (segredos), aplicado por `ai-infra/configs/omniroute/omniroute-config.mjs`. Ler `ai-infra/configs/omniroute/README.md` (como funciona) e `combos.md` (por quê) antes deste procedimento. O agent **nunca configura pelo dashboard** — só pelo script, que é idempotente e tem `diff` (dry-run).
 
-Roda depois de `docs/infra/container-bootstrap.md` (o container sobe junto no `infra-config.mjs up`) e depois de `docs/enviroment/pi-dev.md` (o passo 5 abaixo escreve config do `pi`).
+Roda depois de `docs/infra/container-bootstrap.md` (o container sobe junto no `infra-config.mjs up`).
 
 ## 1. Instância antiga fora do Docker (migração, uma vez só)
 
@@ -16,7 +16,7 @@ Perguntar ao humano se já existe OmniRoute rodando fora do Docker (npm global, 
    node omniroute-config.mjs export --harvest-secrets --ask-password
    ```
    Isso grava `config/*.json` (estado atual) e as chaves de provider no `ai-infra/container/.env` — o agent nunca vê os valores. Pedir pro humano commitar esse snapshot como está (baseline: o `git diff` das decisões fica legível depois).
-2. **Agent executa:** aplicar em `config/*.json` as decisões do `combos.md` que ainda não estiverem lá (combos `pool-exec-free`/`pi-exec`/`pi-light`/`pi-quality`, Caveman off, semantic cache off, providers `deepseek`/`openai`, keys `pi`/`eval` com `windowsEnv`) — só edição de arquivo, mostrar o diff, humano revisa e commita. Combo antigo fora do `combos.md` (ex.: `pi.dev`): perguntar nominalmente se remove.
+2. **Agent executa:** aplicar em `config/*.json` as decisões do `combos.md` que ainda não estiverem lá (combos `pool-exec-free`/`pi-code`/`pi-exec`/`pi-light`/`pi-quality`, Caveman off, semantic cache off, providers `deepseek`/`openai`, keys `pi`/`eval` com `windowsEnv`) — só edição de arquivo, mostrar o diff, humano revisa e commita. Combo antigo fora do `combos.md` (ex.: `pi.dev`): perguntar nominalmente se remove.
 3. **Depende do humano:** parar a instância antiga. Só depois disso subir o container (passo 3).
 
 Desinstalar o npm global e apagar `~/.omniroute`/pasta de export antiga: só depois do passo 6 (prova ponta a ponta) passar, e sempre o humano.
@@ -57,54 +57,20 @@ Saída com "Pendências" (segredo ausente, erro de API): regra do item 8 do Flux
 
 Variável nova no registro não aparece nesta sessão (Fluxo obrigatório, item 6) — pedir confirmação num terminal novo de verdade.
 
-## 5. Provider `omniroute` no `pi` — agent executa
+## 5. Cliente: modos do Claude Code
 
-`~/.pi/agent/models.json` (pode já existir com outros providers — **nunca sobrescrever o arquivo inteiro**, só criar/substituir a chave `providers.omniroute`). Fazer backup antes e usar `node` (já garantido pela Etapa 1):
-
-Nunca `node -e "<script>"` no PowerShell 5.1 — ele remove as aspas duplas dos argumentos passados pra executável nativo e o script quebra (testado). Sempre via arquivo temporário:
-
-```powershell
-$f = "$env:USERPROFILE\.pi\agent\models.json"
-if (Test-Path $f) { Copy-Item $f "$f.bak" -Force }
-$js = "$env:TEMP\pi-models-merge.js"
-@'
-const fs = require("fs"), f = process.argv[2];
-const j = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8").replace(/^﻿/, "")) : {};
-j.providers ??= {};
-const model = (id, name) => ({ id, name, input: ["text"], contextWindow: 128000, maxTokens: 16384 });
-j.providers.omniroute = {
-  baseUrl: "http://localhost:20128/v1",
-  api: "openai-completions",
-  apiKey: "$OMNIROUTE_API_KEY",
-  compat: { supportsDeveloperRole: false, supportsReasoningEffort: false },
-  models: [
-    model("pi-exec", "OmniRoute executor (free pool -> DeepSeek)"),
-    model("pi-light", "OmniRoute light (free)"),
-    model("pi-quality", "OmniRoute quality (Luna -> DeepSeek)"),
-  ],
-};
-fs.writeFileSync(f, JSON.stringify(j, null, 2));
-console.log("providers:", Object.keys(j.providers).join(", "));
-'@ | Set-Content -Encoding utf8 $js
-node $js $f
-Remove-Item $js
-```
-
-`"$OMNIROUTE_API_KEY"` é literal no arquivo (interpolação do próprio `pi` em runtime) — nunca escrever o valor da chave ali.
-
-`compat` desligado porque parte dos providers free rejeita o papel `developer` e o parâmetro `reasoning_effort`; se o eval mostrar que todos aceitam, pode religar.
-
-Verificar de verdade (verificável nesta sessão): a linha `providers:` impressa pelo script lista `omniroute` junto dos providers que já existiam (nenhum sumiu), e `Select-String '"apiKey": "\$OMNIROUTE_API_KEY"' $f` encontra a referência literal. Faltou algum que estava no `.bak`: erro — restaurar o `.bak` e reportar.
+O cliente do OmniRoute é o Claude Code nos modos `claude-pago`/`claude-free` (o OmniRoute fala o formato da Anthropic em `/v1/messages`). Configuração do lado do cliente: `docs/enviroment/claude-modos.md` — roda depois deste arquivo.
 
 ## 6. Prova ponta a ponta
 
 Só depois do humano confirmar a `OMNIROUTE_API_KEY` num terminal novo. Pedir confirmação antes (gasta cota free; não é dinheiro):
 
 ```powershell
-pi -p "say ok" --provider omniroute --model pi-light
+$k = [Environment]::GetEnvironmentVariable('OMNIROUTE_API_KEY','User')
+Invoke-RestMethod http://localhost:20128/v1/messages -Method Post -Headers @{ 'x-api-key' = $k; 'anthropic-version' = '2023-06-01' } -ContentType 'application/json' -Body '{"model":"pi-light","max_tokens":20,"messages":[{"role":"user","content":"say ok"}]}'
 ```
 
-`pi-exec` e `pi-quality` ficam pro `smoke-test.md` da Etapa 2 — `pi-quality` chama modelo pago.
+`pi-code`/`pi-quality` (pagos) ficam pro `claude-modos.md` e pro `smoke-test.md` da Etapa 2.
 
 ## 7. Relatório
 

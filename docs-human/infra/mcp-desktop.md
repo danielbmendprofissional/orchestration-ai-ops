@@ -28,4 +28,4 @@ Mesma regra: nunca token literal, sempre `${VAR}` (já deve existir na máquina 
 
 Extensão oficial ("Connector") no Claude Desktop — botão **+** → **Connectors** → instalar Figma → reiniciar o app pelo processo (não só fechar a janela). Sem JSON, sem token pra colar.
 
-`pi` e Claude Code (CLI) não têm integração com Figma até a data desta nota — só o app Claude Desktop tem o Connector oficial.
+Claude Code (CLI) não tem integração com Figma até a data desta nota — só o app Claude Desktop tem o Connector oficial.

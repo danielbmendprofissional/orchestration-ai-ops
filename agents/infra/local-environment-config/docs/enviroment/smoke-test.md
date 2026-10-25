@@ -1,19 +1,20 @@
 # Testar tudo junto — procedimento do agente
 
-Roda dentro da pasta do projeto sendo configurado — o teste depende de `.pi/agents/*.md` existir dentro dela, então não roda antes da Etapa 2 nem pode ser reaproveitado de outro projeto.
+Roda dentro da pasta do projeto sendo configurado — o teste depende de `.claude/agents/*.md` e `.claude/commands/implement-task.md` existirem dentro dela, então não roda antes da Etapa 2 nem pode ser reaproveitado de outro projeto.
 
-**Pode custar dinheiro de verdade** — os subagents apontam pra combos do OmniRoute (`omniroute/pi-*`); `pi-quality` começa num modelo pago (GPT Luna), e `pi-exec` cai no DeepSeek pago se o pool free estiver esgotado — **sempre pedir confirmação explícita antes de rodar**, mesmo que o resto do plano já tenha sido aprovado: "posso rodar o smoke test? é uma chamada curta por combo configurado em `.pi/agents/*.md`; `pi-quality` usa modelo pago, custo mínimo mas real." Nunca rodar junto do resto do plano sem esse aviso à parte.
+**Pode custar dinheiro de verdade** — o modo pago usa DeepSeek e Luna (pagos). **Sempre pedir confirmação explícita antes de rodar**, mesmo que o resto do plano já tenha sido aprovado: "posso rodar o smoke test? é uma chamada curta no modo pago e uma no free; o pago custa centavos, mas é real." Nunca rodar junto do resto do plano sem esse aviso à parte. O modo Claude (assinatura) **não** é testado por este agent — sessão `-p` não interativa consome o plano do humano.
 
-Pré-requisito: OmniRoute saudável e provider `omniroute` em `~/.pi/agent/models.json` (Etapa 1, `docs/infra/omniroute.md`). Faltando: parar e informar que a Etapa 1 precisa completar esse item.
+Pré-requisito: Etapa 1 com os modos prontos (`docs/enviroment/claude-modos.md`).
 
-**`pi` interativo não funciona nesta sessão** — esta é uma sessão sem TTY real; alimentar `/model` via pipe não reproduz o comportamento de uma sessão `pi` de verdade (pode até cair num modelo padrão interno não relacionado ao projeto). Em vez de simular a sessão interativa, testar cada modelo configurado direto, não-interativo:
+Na raiz do projeto, não interativo:
 
 ```powershell
-pi -p "say ok" --provider <provider> --model <model>
+claude --settings "$HOME\.claude\modos\pago.json" -p "Liste os subagentes disponíveis em .claude/agents e responda só os nomes." --output-format json
+claude --settings "$HOME\.claude\modos\free.json" -p "Responda apenas: ok" --output-format json
 ```
 
-Uma chamada por linha `model:` distinta encontrada em `.pi/agents/*.md` (hoje: `omniroute/pi-exec`, `omniroute/pi-light`, `omniroute/pi-quality` → `--provider omniroute --model pi-exec`, etc. — ler o valor real do projeto, nunca fixar esses como se fossem sempre os mesmos). Resposta curta e sem erro de auth = prova que a `OMNIROUTE_API_KEY` funciona e que cada combo tem pelo menos um alvo vivo. Qual modelo de fato respondeu aparece no dashboard do OmniRoute (logs) — registrar no relatório.
+- A primeira prova que o projeto carrega os subagentes (os 8 nomes: `data`, `backend`, `front`, `ui`, `tests`, `security`, `review`, `qa`) e que o modo pago responde.
+- `docker logs --since 5m omniroute` mostra quem respondeu (`Model … succeeded`) — registrar no relatório.
+- `/implement-task` aparece no autocomplete de uma sessão interativa — pedir pro humano confirmar com `/imp` + Tab.
 
-**Sempre documentar as duas formas no relatório final:**
-- O resultado deste teste não-interativo (o que foi provado).
-- O comando convencional (`pi` interativo + `/model`) pro humano confirmar visualmente, se quiser — isso é o jeito "normal" de usar, mesmo que este agent não consiga reproduzi-lo de dentro de uma sessão sem TTY.
+**Sempre documentar no relatório final:** o resultado dos dois comandos e o comando de uso normal (`claude`, `claude-pago`, `claude-free` na raiz do workspace).

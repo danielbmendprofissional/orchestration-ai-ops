@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Avaliação empírica dos modelos do OmniRoute pro papel de executor do pi.dev.
-// Mede o que o pi precisa: tool calling multi-turn, editar arquivo certo, escrever teste que pega bug.
+// Avaliação empírica dos modelos do OmniRoute pros modos claude-pago/claude-free do Claude Code.
+// Mede o que um subagente precisa: tool calling multi-turn, editar arquivo certo, escrever teste que pega bug.
 // Uso: ver README.md desta pasta.
 
 import { spawnSync } from "node:child_process";

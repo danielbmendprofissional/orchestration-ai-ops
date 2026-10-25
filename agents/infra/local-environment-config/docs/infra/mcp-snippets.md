@@ -65,7 +65,6 @@ Todo trecho nasce `"disabled": true`. Nunca token literal — sempre `${VAR}`; s
 
 ## Ligar um servidor (2 mecanismos diferentes, mesmo `.mcp.json`)
 
-- **`pi`**: tirar o `"disabled"` (ou mudar pra `false`) e rodar `/reload` dentro da sessão `pi` — ou `/mcp enable <nome>` + `/reload`.
 - **Claude Code**: ignora o `"disabled"` do `.mcp.json`. Quem liga/desliga é `.claude/settings.json`, campo `disabledMcpjsonServers` (lista nomes desligados) ou `enabledMcpjsonServers: []` (desliga tudo). Ligar 1 servidor: tirar o nome de `disabledMcpjsonServers`, ou adicionar em `enabledMcpjsonServers` se for lista de permissão.
 
 Nunca ligar um MCP sozinho — só sob pedido explícito do humano pra aquela tarefa específica.
