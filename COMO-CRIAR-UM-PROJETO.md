@@ -1,552 +1,340 @@
-# Como criar um projeto do zero com a orquestração
+# Como usar a orquestração
 
-Roteiro prático, na ordem em que as coisas acontecem. Cada passo diz **onde abrir o terminal**, **o que rodar** e **o que deve existir no final**. O detalhe de cada assunto fica nos arquivos citados — este guia só amarra a ordem.
+Guia curto. Cada seção termina com o link do detalhe. Todos os comandos: [glossário](docs-human/ai-base/glossario-de-comandos.md).
 
-Exemplo usado: `<projeto>` = `esteira` (primeiro projeto criado seguindo este guia). Onde a Esteira está hoje: seção final.
+> **Perdeu o fio?** Abra o Claude na raiz do workspace e digite **`/proximo`**. Ele diz onde você está, o seu próximo passo e de onde vem cada fatia.
 
-- **Parte 1 (passos 0–13):** montar o projeto e a referência de cada etapa.
-- **Parte 2:** o processo do dia a dia: o ciclo de cada fatia e onde **você** valida.
-- **Parte 3:** a primeira rodada da Esteira (frontend), com o primeiro comando.
+## Quero…
+
+| Quero | Vá para |
+|---|---|
+| preparar a máquina | [A1](#a1) |
+| criar um projeto novo, ou trazer um que já existe | [A2](#a2) |
+| entender o que o discovery gera (e o que não gera) | [A3](#a3) |
+| fazer a próxima fatia | [Parte B](#b) |
+| saber quando as specs são geradas | [B2](#b2) |
+| **não gostei da implementação / a spec estava errada / refazer** | **[Como corrigir uma fatia](#corrigir)** |
+| a execução parou (`PAROU`) | [Quando para](#parou) |
+| rodar várias fatias ao mesmo tempo | [Paralelismo](#paralelo) |
+| a spec ficou velha | [Spec velha](#velha) |
+| onde está o glossário (`CONTEXT`) e os outros arquivos | [Onde fica cada coisa](#arquivos) |
+| ver o estado da Esteira | [Estado da Esteira](#estado) |
+
+## Visão geral
 
 ```
-0. máquina pronta (uma vez)
-1. GitLab: grupo + 3 repositórios
-2. workspace local a partir do ai-base
-3. infra do projeto (agent local-environment-config)
-4. skills + MCP
-5. discovery  → /grill-with-docs           (Claude Code)
-6. decisões   → docs/adr/                  (Claude Code + você)
-7. bootstrap dos repositórios de código     (Claude Code)               ┐ fundação: uma vez,
-8. design system                            (Claude Code + impeccable)  ┘ sem spec formal
-── daqui em diante, fatia a fatia ──
-9. spec       → /to-spec B2       → issue-mãe "B2 — …"          (Claude Code)
-10. tickets   → /to-tickets B2    → filhas "B2.1 — …"           (Claude Code)
-11. execução  → /implement-task B2 → tasks + review + MR pra dev (Claude Code + subagentes, um painel do Alethe por fatia)
-12. você      → revisa a MR no GitLab e mergeia                 (fechamento da fatia é automático)
-13. esteira   → tag vX.Y.Z-rcN → qa → hml → main
+UMA VEZ      máquina → projeto (agent) → discovery → fundação (bootstrap + design)
+POR FATIA    /proximo → /fatia B3 → ✋ você aprova a spec → (automático) → ✋ você revisa e mergeia a MR
+DEPOIS       tag → qa → hml → main   (esteira de deploy)
 ```
 
-**Projeto que já existe** (nascido de um `ai-base` antigo, ou aplicação que nunca teve ambiente de IA): pule os passos 1 e 2 e faça o passo 3 com o caminho do projeto — o agent **recria o ambiente** em volta do código existente:
-
-- traz `docs/agents` e `.claude/` (hooks, agents, commands) do `ai-base` atual, adaptados ao layout que o projeto já tem (monorepo continua monorepo — conversão pra workspace só se você pedir);
-- cria a casa do projeto na infra compartilhada (banco novo vazio — dado antigo não migra sozinho; o relatório traz o `pg_dump`/`pg_restore` se você quiser);
-- **não mexe em código**: o que o código precisa mudar (connection string fora do contrato, senha versionada, `/health`, `/metrics`, log) vira a spec `specs/feature/infra/00-adequacao-ambiente.md` + uma issue `needs-triage`, que segue o fluxo normal a partir do passo 10 (tickets).
-
-Rodar de novo depois é seguro: ele só aponta o que o template mudou desde a última recriação (guarda o sha do `ai-base` em `docs/agents/relatorio-ambiente.md`).
+✋ = só você decide. Tudo o mais é automático: tickets, TDD, review, correção de achados, push e MR.
 
 ---
 
-## 0. Máquina pronta (uma vez só)
+# Parte A — Montar o projeto (uma vez)
 
-Não se repete por projeto. Se já fez, pule.
+<a id="a1"></a>
+## A1. Máquina
 
-- Ferramentas (Node, git, Claude Code, Alethe, `glab`, Playwright via Docker): `ai-ops/docs-human/ai-base/comandos-para-rodar.md`, passos 1–7 e 10.
-- Infra compartilhada no ar: `container\.env` preenchido com os logins de admin (modelo em `ai-infra\container\examples\env.example`), depois `cd ai-infra\configs\infra` → `node infra-config.mjs up`. Termina com `✔ tudo conferido` (saúde + muros entre projetos). Nunca `docker compose up` puro. Detalhe: `ai-infra/configs/infra/README.md`.
-- Versão das imagens: fixa no compose; atualizar só pelo agent `ai-ops/agents/infra/infra-versions-config`.
-- OmniRoute (gateway dos modos `claude-pago`/`claude-free`) configurado: `cd ai-infra\configs\omniroute` → `node omniroute-config.mjs diff` (limpo = ok) → `apply` se precisar. Sem OmniRoute só o modo `claude` (plano) funciona.
-- Modos do Claude Code: `~/.claude/modos/pago.json`/`free.json` e os atalhos `claude-pago`/`claude-free` no perfil do PowerShell (`ai-ops/agents/infra/local-environment-config/docs/enviroment/claude-modos.md`).
-- `GITLAB_TOKEN` definido no Windows (variável de usuário) — usado pelo `glab` e pelo MCP do GitLab.
-
-**Pronto quando:** `glab auth status` mostra logado, `claude` abre, e `claude-pago -p "responda ok"` responde com o log do OmniRoute mostrando `deepseek/deepseek-v4-flash succeeded`.
-
-## 1. GitLab: grupo e repositórios
-
-Um **grupo** por projeto, três projetos dentro (padrão em `ai-base/docs/agents/workspace.md`):
+**Quem faz: o agent `local-environment-config`.** Abra o Claude **dentro da pasta dele** e peça a Etapa 1:
 
 ```powershell
-# grupo (ou crie pela interface: Create subgroup dentro de orchestration-ai/...)
-glab api -X POST groups -f name=<projeto> -f path=<projeto> -f parent_id=<id-do-grupo-pai> -f visibility=private
-
-# id do grupo novo
-glab api "groups/<caminho%2Fcompleto%2Fdo%2Fgrupo>" | Select-String '"id"'
-
-# os três projetos
-glab api -X POST projects -f name=<projeto>-workspace -f namespace_id=<id-do-grupo> -f visibility=private
-glab api -X POST projects -f name=<projeto>-api       -f namespace_id=<id-do-grupo> -f visibility=private
-glab api -X POST projects -f name=<projeto>-frontend  -f namespace_id=<id-do-grupo> -f visibility=private
-```
-
-**Pronto quando:** o grupo mostra `<projeto>-workspace`, `<projeto>-api`, `<projeto>-frontend`.
-
-## 2. Workspace local a partir do ai-base
-
-O workspace é o `ai-base` copiado (só arquivos versionados) — regras, `.claude/`, `docs/`. O código mora nos repositórios de componente, dentro dele, ignorados pelo `.gitignore`.
-
-```powershell
-cd <pasta-pai>                                   # ex: ...\orquestracao-ai\ai-pipeline
-mkdir <projeto>; cd <projeto>
-git -C ..\..\ai-base archive HEAD | tar -x       # caminho relativo até o ai-base
-git init -b main
-git remote add origin https://gitlab.com/<grupo>/<projeto>-workspace.git
-
-git clone https://gitlab.com/<grupo>/<projeto>-api.git
-git clone https://gitlab.com/<grupo>/<projeto>-frontend.git
-```
-
-Ajustar no workspace:
-- `README.md` — o que é o projeto e o mapa dos repositórios (o do `ai-base` é genérico).
-- `CONTEXT-MAP.md` — componentes, como conversam, linguagem do domínio.
-- `.mcp.json` — já vem com o bloco do GitLab (`disabled: true`, usa `GITLAB_PERSONAL_ACCESS_TOKEN`).
-- `CLAUDE.md` — **não editar**: é o processo do `ai-base`. Regra de stack de cada componente vai num `CLAUDE.md` dentro do repositório do componente (`<projeto>-frontend/CLAUDE.md`), criado no passo 7.
-
-```powershell
-git add -A; git commit -m "chore: workspace a partir do ai-base"
-git push -u origin main
-```
-
-**Pronto quando:** `git status` na raiz não mostra `<projeto>-api/` nem `<projeto>-frontend/` (ignorados) e o workspace está no GitLab.
-
-## 3. Infra do projeto (agent `local-environment-config`)
-
-A "casa" do projeto em cada ferramenta da infra compartilhada, sem enxergar a de nenhum outro projeto:
-
-| Ferramenta | O que o projeto ganha |
-|---|---|
-| Postgres | banco `<projeto>`, roles `<projeto>_owner` (migrations) e `<projeto>_app` (runtime, só DML) |
-| RabbitMQ | vhost `<projeto>` + usuário `<projeto>` |
-| Redis | usuário `<projeto>`, só chaves/canais `<projeto>:*` |
-| Keycloak | realm `<projeto>`, client confidencial `<projeto>-api` (BFF: Authorization Code + PKCE), usuário de teste `dev` |
-| Observabilidade | `/metrics` da API raspado pelo Prometheus; logs com rótulo `project=<projeto>` no Grafana |
-
-Tudo nasce de **uma entrada** no manifesto `ai-infra/configs/infra/projects.json` + `node infra-config.mjs apply`, e o `verify` prova os muros. O app recebe as credenciais pelo contrato de nomes de `ai-base/docs/agents/infra-local.md` (`ConnectionStrings:Postgres`, `RabbitMQ:*`, `Keycloak:*`...), gerado em `ai-infra/container/generated/projects/<projeto>.secrets.json`.
-
-**Não faça na mão** — é pra isso que o agent existe (e é um bom teste dele):
-
-```powershell
-cd C:\Users\danib\source\repos\orquestracao-ai\ai-ops\agents\infra\local-environment-config
+cd ai-ops\agents\infra\local-environment-config
 claude
 ```
-
-Pedir: *"configura o projeto em `<caminho completo do workspace>`"*. Ele lê o projeto (ADRs, `CONTEXT-MAP.md`) pra saber o que ele usa (ex. Esteira: Postgres, RabbitMQ, Redis, Keycloak com callback `http://localhost:4200/api/v1/auth/callback`, `/metrics` na 5105), propõe a entrada do manifesto, e depois de aprovado roda `apply` + `verify` e carrega as credenciais no user-secrets da API:
-
-```powershell
-node ai-infra\configs\infra\infra-config.mjs secrets <projeto> --csproj=<csproj da API>
+```
+Etapa 1: configuração inicial da máquina.
 ```
 
-Ele devolve um **plano** → você aprova → ele executa → relatório com onde ficou cada credencial (nunca o valor; as senhas são geradas pelo script em `ai-infra/container/.env`, `PROJECT_<PROJETO>_*`). Sempre abrir o `claude` **dentro da pasta do agent**, nunca dentro do projeto (`ai-ops/agents/infra/local-environment-config/README.md`).
+Ele verifica o que já existe, mostra o plano, **espera o seu ok**, executa e verifica. Instala Claude Code, `glab` e Angular CLI, sobe a infra compartilhada (`ai-infra`), o OmniRoute e os modos `claude-pago`/`claude-free`.
 
-**Pronto quando:** `node infra-config.mjs verify` termina com `✔ tudo conferido` mostrando os muros do projeto, e a API lê as chaves do contrato (nada de superusuário, `guest` ou senha em `appsettings` versionado).
+**Você faz** (o agent nunca faz): instalar Node, Git, VS Code e Docker Desktop; cadastrar chaves (`setx NOME "valor"`); instalar o Alethe; criar os profiles do VS Code.
 
-## 4. Skills e MCP
+**Pronto quando:** o relatório final não tem pendência e `claude-pago -p "responda ok"` responde.
+Detalhe: [agent](agents/infra/local-environment-config/CLAUDE.md), Etapa 1.
 
-As skills não são versionadas (só o `skills-lock.json`). Na **raiz do workspace**:
+<a id="a2"></a>
+## A2. Projeto (novo ou existente)
 
-```powershell
-npx skills add https://github.com/mattpocock/skills -s '*' -a claude-code -y   # grill-me, to-spec, to-tickets, implement, tdd, code-review...
-npx skills add https://github.com/angular/skills    -s '*' -a claude-code -y   # angular-developer, angular-new-app
-# avoid-ai-design e skills de segurança: comandos-para-rodar.md, seções 8 e 13
+**Quem faz: o mesmo agent, Etapa 2.** Nada de criar repositório, clonar `ai-base`, banco ou skill na mão. Na mesma sessão do agent:
+
+**Projeto novo:**
+```
+Etapa 2, projeto NOVO. Grupo no GitLab: <grupo>. Nome: <projeto>.
+Componentes: api e frontend. Visibilidade: <private>. Pasta local: <caminho>.
 ```
 
-As de design (`ui-ux-pro-max`, `impeccable`) só depois que existir app Angular rodando (passo 8).
+**Projeto que já existe:**
+```
+Etapa 2, projeto EXISTENTE em <caminho completo da pasta>.
+```
 
-MCP do GitLab: no Claude Code, `/mcp` deve mostrar `gitlab` conectado. Se aparecer `CONNECTION_CLOSED`, quase sempre é o nome da variável — o servidor `@zereight/mcp-gitlab` só lê `GITLAB_PERSONAL_ACCESS_TOKEN` (não `GITLAB_TOKEN`). Fallback sem MCP: `glab` (`docs/agents/issue-tracker.md`).
+O agent mostra o plano e, com o seu ok, faz tudo isto:
+- cria `<projeto>-workspace`, `<projeto>-api` e `<projeto>-frontend` no GitLab;
+- monta o workspace a partir do `ai-base` (regras, comandos, agentes, scripts) e as pastas dos componentes com o `.gitlab-ci.yml`;
+- cria a casa do projeto na infra compartilhada (banco, vhost, Redis, realm Keycloak) pelo manifesto;
+- configura `.mcp.json`, skills, `impeccable` e skills de segurança, e roda o smoke test;
+- escreve `docs/agents/relatorio-ambiente.md` com acessos e pendências.
 
-**Pronto quando:** `/grill-with-docs` aparece no autocomplete do Claude Code e `/mcp` mostra o GitLab verde.
+**Projeto existente** não tem o código tocado: o agent só recria o ambiente e gera uma spec de adequação (`specs/feature/infra/00-adequacao-ambiente.md`), que você executa depois como uma fatia comum.
 
-## 5. Discovery — `/grill-with-docs`
+**Você faz:** aprovar o plano, **commitar e dar push** (o agent nunca faz) e decidir o que ele marcar como "depende de você".
 
-A partir daqui o trabalho é **sempre na raiz do workspace**:
+**Pronto quando:** `relatorio-ambiente.md` sem pendência e os três repositórios com o primeiro push.
+Detalhe: [agent](agents/infra/local-environment-config/CLAUDE.md), Etapa 2 · [recriar projeto existente](agents/infra/local-environment-config/docs/enviroment/recriar-projeto.md).
+
+<a id="a3"></a>
+## A3. Discovery e decisões
+
+Na **raiz do workspace** (daqui em diante é sempre lá):
 
 ```powershell
 cd <workspace>
 claude
 ```
-
-O `/grill-with-docs` não segue pauta sozinho: a árvore de decisões cresce a partir do que você fala. Por isso a abertura é fixa, com a pauta:
-
 ```
-/grill-with-docs <o que é o projeto, 2-3 frases>.
-Pauta obrigatória — não encerre com nenhum item em aberto:
-1. Domínio: termos, regras, o que fica de fora → CONTEXT-MAP.md (nunca GLOSSARY.md)
-2. Arquitetura e padrões: confirmar docs/agents/padrao-frontend.md e padrao-api.md; ADR só pro que diverge ou é do domínio
+/grill-with-docs <o que é o projeto, em 2-3 frases>.
+Pauta obrigatória, sem item em aberto:
+1. Domínio: termos, regras, o que fica de fora → CONTEXT-MAP.md
+2. Arquitetura: confirmar docs/agents/padrao-*.md; ADR só para o que diverge ou é do domínio
 3. Direção de design: referências e tom → docs/referencias/visual/
 4. Mapa de fatias: ordem e dependências → specs/README.md
-Leia antes: CONTEXT-MAP.md, docs/adr/, docs/agents/padrao-*.md, docs/referencias/
 ```
 
-Pra uma fatia específica depois do discovery do projeto, o grill é curto e só sobre o que está aberto nela (Parte 2).
+Ele entrevista, uma pergunta por vez. "Não sei, recomende" é resposta válida.
 
-O Claude entrevista você (uma pergunta por vez) até fechar as lacunas: regras, termos do domínio, o que fica de fora. Termos vão pro `CONTEXT.md`/`CONTEXT-MAP.md`. Responda com o que você sabe; "não sei, recomende" é resposta válida.
+**O que sai do discovery:**
 
-O discovery do projeto fecha **decisões**, não código:
-- **Domínio:** termos, regras e o que fica de fora → `CONTEXT-MAP.md`.
-- **Arquitetura e padrões:** stack, camadas, contrato de API (paginação, erros), autenticação e padrões de código já vêm prontos em `docs/agents/padrao-frontend.md` e `padrao-api.md` — o discovery só confirma. ADR (passo 6) é pro que diverge desses padrões e pras decisões do domínio.
-- **Direção de design:** referências visuais e o tom (ex.: "maduro, nível GitLab") → `docs/referencias/visual/` (local, fora do git: material de terceiros). Os tokens e o tema em si nascem no passo 8.
-- **Mapa de fatias:** a ordem e as dependências → `specs/README.md`.
+| Arquivo | O que é |
+|---|---|
+| `docs/adr/NNNN-*.md` | decisões que valem além de uma fatia (decisão, porquê, impacto) |
+| `CONTEXT-MAP.md` | glossário do domínio + mapa dos componentes |
+| `specs/README.md` | **o mapa: uma linha por fatia** (status, ordem, repositório, depende de, toca em) |
 
-- Trabalho grande demais pra uma sessão → `/wayfinder` antes (mapa + tickets filhos).
-- Dúvida de qual skill usar → `/ask-matt`.
+> **O discovery NÃO gera as specs.** O mapa lista **todas** as fatias, mas cada **spec** só é escrita quando chega a vez dela (ver [B2](#b2)). Mapa com 14 linhas e 5 specs é o normal.
 
-**Pronto quando:** não sobra pergunta aberta sobre arquitetura, padrões e direção de design, e o mapa de fatias existe.
+Trabalho grande demais para uma sessão: `/wayfinder` antes. Em dúvida de qual skill usar: `/ask-matt`.
 
-## 6. Decisões — `docs/adr/`
+**Pronto quando:** não sobra pergunta aberta e o mapa existe.
 
-Toda decisão que vale além de uma fatia (padrão de API, autenticação, stack, convenção) vira ADR curta em `docs/adr/NNNN-nome.md`: **decisão**, **por quê**, **impacto**. A spec cita a ADR em vez de repetir. Decisão de um componente só pode ir no `CLAUDE.md` dele.
+## A4. Fundação: bootstrap e design (sem spec)
 
-**Pronto quando:** nenhuma spec precisa "decidir" algo transversal no meio do texto.
+Feita pelo Claude Code direto das ADRs e dos `padrao-*.md`, **sem spec nem tickets** (não há regra de negócio para virar EARS). Sessão normal na raiz do workspace:
 
-## 7. Bootstrap dos repositórios de código
+1. **Bootstrap** de `<projeto>-frontend` (`ng new`, Tailwind, spartan/ui, estrutura, `nginx/`, `proxy.conf.json`) e de `<projeto>-api` (`/health`, `/metrics`, log JSON, chaves do contrato de infra).
+   Peça: `Faça o bootstrap do <projeto>-frontend direto das ADRs e de docs/agents/padrao-frontend.md. Mostre o plano antes do ng new.`
+2. **Design system**, antes de qualquer spec com tela: `/impeccable init`, tokens em `src/styles.css`, uma página de amostra que **você aprova**.
+   Peça: `Faça o design system do <projeto>-frontend. Direção em docs/referencias/visual/. Quero uma página de amostra para aprovar.`
 
-Feito pelo **Claude Code** (sessão normal, sem `/implement-task`), direto de `docs/agents/padrao-frontend.md`/`padrao-api.md` + ADRs do projeto, **sem spec formal nem tickets**: é fundação, não tem regra de negócio pra virar EARS. O "pronto quando" abaixo é o checklist. Vem antes do design system porque o tema é código (`@theme` do Tailwind + variáveis do helm do spartan no `src/styles.css`) e o `impeccable` valida contra o app rodando.
+**Pronto quando:** `ng serve`/`dotnet run` sobem, `npm test` roda, o design está aprovado e as branches estão **mergeadas em `dev`**.
+Detalhe: [padrão do frontend](../ai-base/docs/agents/padrao-frontend.md) · [padrão da API](../ai-base/docs/agents/padrao-api.md) · [infra local](../ai-base/docs/agents/infra-local.md).
 
-- **Frontend:** `ng new` na versão estável, Tailwind 4 + spartan/ui (`@spartan-ng/cli:init`, helm em `src/app/shared/ui`), Vitest + Playwright + axe, estrutura de `padrao-frontend.md`, `core/config` lendo `/config.json`, `proxy.conf.json` de `/api`, `nginx/` copiado de `template-ci/examples/angular/nginx`, `.gitlab-ci.yml` copiado de `ai-base/templates/frontend.gitlab-ci.yml` (`ANGULAR_DIST_PATH`, `TEST_COMMAND`), `public/config.json` de dev, `package-lock.json` commitado, `<projeto>-frontend/CLAUDE.md` com a stack.
-- **API:** `.gitlab-ci.yml` de `ai-base/templates/api.gitlab-ci.yml`, `/health`, `/metrics`, log JSON + OTLP (`ai-base/docs/agents/observabilidade-backup.md`), configuração só pelas chaves do contrato (`ai-base/docs/agents/infra-local.md`, via user-secrets em dev), porta do `/metrics` no campo `metrics` do projeto em `ai-infra/configs/infra/projects.json`.
+---
 
-**Pronto quando:** `ng serve`/`dotnet run` sobem, `npm test` roda, estrutura bate com a ADR, e a branch está **mergeada em `dev`** (o fechamento de fatia de `ai-base/docs/workflow.md` vale aqui também).
+<a id="b"></a>
+# Parte B — Rotina por fatia
 
-## 8. Design system
+| # | Passo | Comando | Quem |
+|---|---|---|---|
+| 1 | descobrir a próxima | `/proximo` | você |
+| 2 | spec | `/fatia B3` | Claude escreve e **para** |
+| 3 | **aprovar a spec** | responder "aprovo" | ✋ você |
+| 4 | tickets, TDD, review, MR | (segue sozinho) | automático |
+| 5 | **revisar e mergear a MR** | no GitLab | ✋ você |
+| 6 | fechar a fatia | (CI, ou no próximo comando) | automático |
 
-Logo depois do bootstrap, antes de qualquer spec com tela. Também **sem spec formal**: a direção veio do discovery e a validação é você aprovando a página de amostra. Na raiz do `<projeto>-frontend`, com `ng serve` rodando:
-
-```powershell
-npm install -g ui-ux-pro-max-cli; uipro init --ai claude
-npx impeccable install
-```
-
-No Claude Code:
-1. `ui-ux-pro-max` → direção de design (perfil `dashboard`/`app-component` pra sistema interno).
-2. `/impeccable init` → gera `DESIGN.md`/`PRODUCT.md`, usando `docs/design/tokens.md` como semente.
-3. Mapear os tokens no `src/styles.css`: `@theme` do Tailwind e, no `:root`, as variáveis do helm do spartan (`--primary`, `--background`…) apontando pros mesmos valores. Tema de fábrica (spartan `stone`/`zinc`, paleta default do Tailwind) é P0.
-4. Referências visuais: `docs/design/referencias.md` (Aceternity, 21st.dev, bklit — só inspiração, reimplementa em Angular; `interfaces.rauno.me` como checklist).
-
-**Pronto quando:** uma página de amostra (botões, tabela, formulário, badges de status, estados vazio/erro) sai com a cara do projeto, **você aprovou**, a branch está **mergeada em `dev`** e o `<projeto>-frontend/CLAUDE.md` aponta pro `DESIGN.md`. Daí em diante toda spec com tela cita o `DESIGN.md` em vez de repetir decisão visual.
-
-## 9. Spec — `/to-spec`
-
-Você não precisa montar o prompt: o `CLAUDE.md` do workspace manda o `/to-spec` seguir `docs/agents/spec-format.md`, que faz o trabalho de pesquisa sozinho — acha a fatia no `specs/README.md`, confere o gate com `git` (dependências mergeadas em `dev`), lê as ADRs que tratam do assunto, os padrões do ai-base e o código atual dos repositórios tocados, e **só pergunta o que nenhum desses responde**. Fatia toda decidida em ADR sai sem pergunta nenhuma; fatia com lacuna vira um grill curto ali mesmo.
-
-Na raiz do workspace, sessão nova:
+## B1. Descobrir a próxima
 
 ```
-/to-spec                 # a próxima fatia desbloqueada do mapa
-/to-spec B1 B2           # fatias específicas (um arquivo + uma issue-mãe por fatia)
-/to-spec A1 — o aprovador de negócio não precisa de conta no GitLab
-                         # o que vier depois do travessão é contexto seu que não está em lugar nenhum
+/proximo          # visão geral
+/proximo B3       # a ficha de uma fatia: de onde vem, o que depende dela, o que ler
 ```
 
-O que esperar, em ordem: qual fatia ele achou e por quê → gate (ok, ou o que falta e para) → as perguntas abertas, uma por vez, com recomendação (ou "nenhuma") → o arquivo escrito + resumo da Ideia e dos critérios pra você aprovar → só então a issue-mãe e o link no mapa.
+Mostra o seu próximo passo, a origem da fatia (linha do mapa, ADR), se alguma ADR já cobre o assunto ou se precisa de grill, o que pode rodar em paralelo e se alguma spec ou o mapa estão velhos.
 
-`/grill-with-docs` antes do `/to-spec` só quando a fatia ainda é ideia solta (não está no mapa, ou a linha dela é uma frase vaga) — aí o grill decide o escopo e o `/to-spec` vem na mesma sessão.
+<a id="b2"></a>
+## B2. Spec — quando e como é gerada
 
-Formato: arquivo `specs/feature/<área>/NN-nome.md` como fonte de verdade, `## Contexto necessário` no topo, Ideia · Dados · Backend · Frontend · Infra · Testes ("N/A" no que não se aplica), critérios em EARS (checklist em fatia de fundação/limpeza), issue-mãe só com link + resumo.
+**Uma spec por vez, na vez da fatia.** A spec cita o código que a fatia anterior deixou em `dev`; escrita antes, nasce velha. Por isso:
 
-Fatia = entrega fina **ponta a ponta**, nunca "só o backend". Exceção: fatias de infra/bootstrap (sem EARS de domínio, viram checklist).
-
-**Pronto quando:** você leu a spec e concorda com cada EARS — ela vira o contrato dos testes.
-
-## 10. Tickets — `/to-tickets`
-
-```
-/to-tickets B2
-```
-
-Quebra a spec em tickets e mostra a quebra pra você aprovar. Publica cada um como **Task filha da issue-mãe** (aparece em "Child items" da mãe), título `B2.1 — …`, `B2.2 — …` na ordem de execução, com label de área + `ready-for-agent` e `Blocked by:` no topo. Como: `docs/agents/issue-tracker.md` ("Tickets de uma spec"); labels: `docs/agents/triage-labels.md`.
-
-**Pronto quando:** as issues estão no GitLab com dependências e a primeira está desbloqueada.
-
-### Nomes: o código da fatia liga tudo
-
-Você nunca precisa saber o `#` de uma issue. O código da fatia no mapa (`B2`) aparece em todo lugar:
-
-| Onde | Como aparece | Exemplo |
-|---|---|---|
-| GitLab, issue-mãe | `<fatia> — <título>` | `B2 — Result pattern + Problem Details (ADR-0003)` |
-| GitLab, filhas (Child items da mãe) | `<fatia>.<N> — <título>` | `B2.1` … `B2.5`: a última é a de maior N |
-| Branch, em cada repositório tocado | `feature/<fatia>-<slug da spec>` | `feature/b2-result-e-problem-details` |
-| Commit, um por filha | `… (<fatia>.<N> · workspace#<filha>)` | `feat: VOs devolvem Result (B2.5 · workspace#8)` |
-| MR pra `dev` | `<fatia> — <título>` | `B2 — Result pattern + Problem Details (ADR-0003)` |
-
-Com 4 mães (A, B, C, D) de 5 filhas cada: `/implement-task B2` só enxerga as filhas da mãe B2, só mexe na branch `feature/b2-*`, e antes de começar imprime o cabeçalho com o que vai fazer e o que está fora:
+- o **mapa** nasce inteiro no discovery; as **specs**, não;
+- a spec de uma fatia só é escrita quando todas as dependências dela estão **mergeadas em `dev`** (o `/fatia` confere e para se não estiver);
+- você dispara com `/fatia B3` (o `/proximo` diz qual é a próxima); nunca gere as specs adiantado;
+- fatias independentes podem ter spec juntas: `/to-spec B1 B2`.
 
 ```
-Fatia B2 — Result pattern + Problem Details (workspace#2) · spec specs/feature/base/02-…md
-Branch feature/b2-result-e-problem-details em esteira-api
-Filhas: B2.1 #4 ✔ · B2.2 #5 ✔ · B2.3 #6 ✔ · B2.4 #7 ✔ · B2.5 #8 → agora
-MR: — · Fora do escopo: tudo que não é filha de #2
+/fatia B3                          # a spec e, depois do seu ok, a execução inteira
+/fatia                             # a próxima fatia livre
+/fatia B3 — <contexto seu>         # o que não está em nenhum documento
 ```
 
-## 11. Execução — `/implement-task B2` (Claude Code)
+O `/fatia` pesquisa sozinho (mapa, ADRs, código) e **só pergunta o que nenhum deles responde**. Escreve `specs/feature/<área>/NN-nome.md` e **para**. Fatia ainda é ideia solta, fora do mapa? `/grill-with-docs` antes.
 
-Uma sessão por spec (um painel do Alethe cada, em paralelo se quiser), **sempre na raiz do workspace** — de lá ela enxerga `<projeto>-api/` e `<projeto>-frontend/`. Escolha o modo ao abrir (`docs/agents/orchestration.md`):
+Detalhe: [formato da spec](../ai-base/docs/agents/spec-format.md).
 
-```powershell
-cd <workspace>
-claude          # seu plano (padrão)
-claude-pago     # quando o plano apertar: OmniRoute, DeepSeek → Luna
-claude-free     # último recurso: combos gratuitos
-```
+## B3. Aprovar a spec ✋
 
-**Qual fatia rodar:** o mapa, `specs/README.md` — a que tem todas as dependências feitas (mergeadas em `dev`).
+É a **única** leitura antes do código. Confira:
+- cada critério EARS é **testável** ("Quando X, o sistema deve Y"); vago ("deve ser bonito") volta;
+- o **fora do escopo** está certo;
+- o **`risco`** (`alto` = auth, sessão, segredo, permissão, migração, dependência nova).
 
-```
-/implement-task B2                  # a fatia inteira: o que falta, review e MR (o normal)
-/implement-task B2.5                # só essa filha (refazer uma task específica)
-/implement-task B2 — <instrução>    # com contexto seu (ex.: "corrigir: o critério 3 vale como na spec")
-/implement-task                     # a próxima fatia desbloqueada do mapa (ele diz qual escolheu)
-```
+| Você responde | Efeito |
+|---|---|
+| `aprovo` | abre a mãe, cria os tickets e executa |
+| `ajuste: <o que mudar>` | ele corrige a spec e mostra de novo (ainda não existe ticket) |
+| `não aprovo: <motivo>` | ele para; vira conversa ou grill |
 
-**Um comando só leva a fatia das tasks até a MR aberta.** Você não chama o `/code-review` nem repassa FAIL. O que acontece, em ordem:
+`risco: alto` mostra também os tickets antes de executar.
 
-1. **Fecha as fatias já mergeadas** (issues e mapa), se houver.
-2. **Cabeçalho**: fatia, filhas (✔ feitas, → próxima), branch, MR e o que está fora do escopo.
-3. **Branch** `feature/b2-<slug>` a partir de `origin/dev` em cada repositório que a fatia toca (ou retoma a que existe).
-4. **Cada filha que falta**, na ordem do `Blocked by`: TDD (teste vermelho antes do código), testes da task com filtro, suite completa uma vez, **commit** `… (B2.N · workspace#n)` na branch e uma nota na filha no GitLab com o sha. Modo `claude`: o próprio pai implementa. Modo pago/free: subagente executor + `review` por task.
-5. **`/code-review`** (Standards + Spec, contra `origin/dev`) assim que não sobra filha.
-6. **FAIL → ele corrige sozinho** (commit `fix: … (B2.N · …)`) e revisa de novo, no máximo 2 rodadas.
-7. **PASS → entrega**: prova `.code-review-ok.json`, **push** e **MR pra `dev`** com título `B2 — …`. A descrição traz tasks, commits, suposições e "Como testar". Ele também deixa uma nota na mãe com o link.
-8. **Relatório** fixo + notificação:
+## B4. Execução (automática)
 
-```
-B2 — PRONTA PARA SUA REVISÃO          (ou: B2 — PAROU: precisa de você)
-MR: <link> (dev ← feature/b2-…)  · filhas B2.1–B2.5 ✔ · review PASS na rodada 1
-Suposições: …
-Você agora: abrir a MR, testar, aprovar e mergear — ou comentar na MR e rodar /implement-task B2
-```
+Branch `feature/b3-…` → cada ticket com TDD e um commit → suite completa → `/code-review` → corrige os achados sozinho (até 2 rodadas) → push → MR para `dev` → relatório + notificação. A mãe fica com o label `em-execucao`.
 
-**Acompanhar pelo GitLab, sem olhar o terminal.** Os commits só sobem no fim, com a MR. Até lá, o andamento aparece na própria issue-mãe, que ganha este bloco na descrição, atualizado a cada passo:
+**Acompanhar sem o terminal:** board de issues do workspace por label `em-execucao`; na descrição da mãe, o painel **Execução** (área, modo, **quem executou cada ticket**, suite, review, MR).
 
-```markdown
-### Execução
-- [x] B2.1 #4 — `0b4bd79`
-- [x] B2.2 #5 — `86dd9db`
-- [x] B2.3 #6 — `8707df5`
-- [ ] B2.4 #7 — em andamento
-- [ ] B2.5 #8
-- [ ] Review
-- [ ] MR
-```
+Detalhe: [`/implement-task`](../ai-base/.claude/commands/implement-task.md) · [orquestração](../ai-base/docs/agents/orchestration.md).
 
-- Na **lista de issues** do workspace, cada mãe mostra a contagem do checklist ("3 of 7"). Com A, B, C e D rodando em paralelo, você vê as quatro numa tela só.
-- Nos **Child items** da mãe, a filha que está sendo feita tem a label `em-andamento`, e cada filha terminada tem uma nota com o sha.
-- Se ele **parar**, a linha vira `⚠ parou: <motivo>`: dá pra ver o problema sem abrir o terminal.
+<a id="parou"></a>
+### Quando ele para (`PAROU`)
 
-**Quando ele para e devolve pra você** (o relatório diz `PAROU` e a nota vai na mãe):
+O relatório diz o motivo e a decisão que falta. Você resolve e roda de novo (`/implement-task B3`): ele retoma de onde parou.
 
 | Motivo | O que você faz |
 |---|---|
-| working tree sujo num repositório da fatia | comita ou descarta o que é seu, roda `/implement-task B2` de novo |
-| filha bloqueada (`Blocked by` de outra fatia não feita) | roda a outra fatia antes |
-| review FAIL depois de 2 rodadas de correção | lê os achados no relatório: spec ambígua → corrige a spec; achado com o qual ele discorda → decide e roda `/implement-task B2 — <decisão>` |
-| spec ambígua ou contrato inventado | responde a pergunta exata do relatório |
+| working tree sujo | comita ou descarta o que é seu |
+| ticket bloqueado por outra fatia | faça a outra fatia antes (`/proximo`) |
+| review FAIL após 2 rodadas | spec ambígua → corrija a spec ([caso 3](#c3)); discorda do achado → `/implement-task B3 — <sua decisão>` |
+| spec ambígua / contrato inventado | responda a pergunta exata do relatório |
 
-Em qualquer caso, ele retoma de onde parou: filha feita = commit dela na branch.
+## B5. Revisar a MR e mergear ✋
 
-O que observar durante a execução:
-- teste escrito **antes** do código e congelado — asserção afrouxada pra passar é quebra de regra, interrompa;
-- as **Suposições** no relatório: suposição errada é a origem da maioria dos retrabalhos;
-- modo pago/free sem resposta → OmniRoute fora (`node omniroute-config.mjs diff` no `ai-infra`).
+No GitLab, MR `B3 — …` do repositório (uma por repositório tocado):
+1. Leia a descrição: tickets, commits, **executores**, suposições, achados não corrigidos.
+2. Teste pelo "Como testar": `git -C <repo> switch feature/b3-…`, suba e percorra os critérios da spec. Com tela: `/impeccable critique|audit <url>`.
+3. **Está bom** → aprove e **mergeie em `dev`** (API antes do frontend).
+   **Não está bom** → [Como corrigir uma fatia](#corrigir).
 
-**Pronto quando:** o relatório diz `PRONTA PARA SUA REVISÃO` e a MR está aberta.
+## B6. Depois do merge
 
-## 12. Sua revisão da MR e o merge
+Nada a fazer. O CI fecha a mãe e os tickets quando o job `fechar-fatia` está ligado; sem ele, o próximo `/fatia`, `/implement-task` ou `/to-spec` fecha. O **Status** do mapa vira `feito` no commit de docs da próxima spec. Rode `/proximo`.
 
-Tudo acontece no GitLab, na MR `B2 — …` do repositório de código (`<projeto>-api` e/ou `<projeto>-frontend`, uma MR em cada):
-
-1. **Lê** a descrição: tasks com commits, achados de julgamento não corrigidos e suposições.
-2. **Testa** pelo "Como testar" da descrição: `git -C <projeto>-api switch feature/b2-…`, sobe a aplicação e percorre os critérios da spec. Fatia com tela: `/impeccable critique|audit` contra o localhost (Parte 2, passo 8).
-3. **Decide:**
-   - **Está bom** → aprova e mergeia em `dev`. Fatia que toca API e front: mergeia a da API primeiro.
-   - **Precisa mudar** → comenta na MR (no código ou na conversa) e roda `/implement-task B2`. Ele lê os comentários não resolvidos, corrige, revisa de novo, faz push na mesma MR e responde cada comentário com o sha. Você confere e resolve os comentários.
-4. **Depois do merge, nada.** O próximo `/implement-task` ou `/to-spec` (de qualquer fatia) fecha a mãe e as filhas no GitLab e marca a fatia como feita no mapa. A MR vai pra `dev`, que não é o branch padrão, então o `Closes` do GitLab não fecharia as issues sozinho.
-
-Próxima etapa: a próxima fatia do mapa (`/to-spec <fatia>` se ainda não tem spec, `/implement-task <fatia>` se já tem tickets). Quando todas as fatias da rodada estiverem em `dev`, passo 13.
-
-## 13. Esteira — tag e promoção
-
-Quando todas as specs da rodada estiverem em `dev`: tag `vX.Y.Z-rcN` → `dev → qa` (merge direto por tag) → agente `qa` testa → MR `qa → hml` (aprovação humana) → MR `hml → main` + tag final `vX.Y.Z`. Detalhe: `ai-base/docs/agents/esteira-deploy.md` e `ai-pipeline/template-ci/docs/fluxo-de-tags.md`. API promove antes (ou junto) do frontend que depende dela.
+Quando todas as fatias da rodada estiverem em `dev`: tag `vX.Y.Z-rcN` → qa → hml → main. Detalhe: [esteira de deploy](../ai-base/docs/agents/esteira-deploy.md) · [fluxo de tags](../ai-pipeline/template-ci/docs/fluxo-de-tags.md).
 
 ---
 
-# Parte 2 — O processo: o ciclo de cada fatia
+<a id="corrigir"></a>
+# Como corrigir uma fatia
 
-Os passos 0–4 se fazem **uma vez por projeto**. Daqui pra frente, todo trabalho é o mesmo ciclo, repetido fatia por fatia. O que muda entre fatias é só o conteúdo, nunca a ordem.
+Escolha o caso. Em todos, rode na raiz do workspace (ou na área da fatia, ver [Paralelismo](#paralelo)).
 
-## Quem faz o quê
-
-| Quem | Papel | Onde |
+| # | Situação | O que digitar |
 |---|---|---|
-| **Você** | Decide, aprova e valida. É o único que aprova spec, merge e design | — |
-| **Claude Code** | Pensa e executa: discovery, arquitetura, ADR, spec, tickets, bootstrap, design system; na execução (`/implement-task`) é o agente-pai; depois o `/code-review` | `claude`/`claude-pago`/`claude-free` na raiz do workspace, um painel do Alethe por spec |
-| **Subagentes** | `data`, `backend`, `front`, `ui`, `tests`, `security`, `review` (`.claude/agents/`), contexto limpo por task | chamados pelo `/implement-task`, nunca por você |
+| 1 | [MR aberta, o código tem um problema](#c1) | comentário na MR + `/implement-task B3` |
+| 2 | [MR aberta, sem querer comentar no GitLab](#c2) | `/implement-task B3 — corrigir: <o que>` |
+| 3 | [O código faz o que a spec diz, mas a spec estava errada](#c3) | ajustar a spec + `/implement-task B3 — a spec mudou: …` |
+| 4 | [Descartar tudo e refazer do zero](#c4) | apagar a branch (no seu terminal) + `/implement-task B3` |
+| 5 | [Já mergeou e apareceu problema](#c5) | nova fatia no mapa + `/fatia` |
 
-Regra prática: **o modo é escolha de custo, não de papel** — o processo é o mesmo em `claude`, `claude-pago` e `claude-free`.
+<a id="c1"></a>
+### 1. Problema no código, com a MR aberta
+Comente **na MR**, no código ou na conversa, uma coisa por comentário. Depois:
+```
+/implement-task B3
+```
+Ele lê os comentários não resolvidos, corrige com TDD, roda o review de novo, dá push na mesma MR e responde cada comentário com o sha. Você confere e resolve os comentários.
 
-## Quanto especificar de uma vez
+<a id="c2"></a>
+### 2. Corrigir sem comentar no GitLab
+```
+/implement-task B3 — corrigir: o botão "Nova aplicação" aparece para quem não é MOR (critério 4)
+```
+Cite o critério da spec quando houver. Mesmo efeito do caso 1.
 
-Só o **mapa** nasce inteiro. Spec, tickets e testes nascem na hora em que vão ser usados, uma fatia por vez. O que se aprende implementando uma fatia muda as seguintes. Spec escrita cedo demais é retrabalho e token gasto à toa.
+<a id="c3"></a>
+### 3. A spec estava errada ou incompleta
+Não corrija o código primeiro: o teste foi escrito contra a spec e continuaria passando.
+```
+Ajuste a spec B3: <o que muda; cite o critério>. Mostre o antes e o depois.
+```
+Com o seu ok na spec:
+```
+/implement-task B3 — a spec mudou: <resumo>. Ajuste os testes e o código dos critérios afetados.
+```
+Critério **novo** (sem ticket que o cubra): rode antes `/to-tickets B3` e confira com `node .claude/scripts/check-tickets.mjs B3 <spec> <grupo>/<projeto>-workspace`.
 
-| O quê | Quando | Por quê |
-|---|---|---|
-| Mapa de fatias (`specs/README.md`), ADRs, `CONTEXT-MAP.md` | tudo, logo depois do discovery | barato (uma linha por fatia); dá ordem e dependências |
-| Spec detalhada (EARS) | só a próxima fatia, no máximo as duas seguintes | a fatia N muda a N+1 |
-| Tickets | só da spec recém-aprovada | dependem do código que já existe |
-| Testes | por ticket, durante a execução (vermelho primeiro, TDD) | os EARS já são o contrato; o teste é escrito contra o código real do momento |
+<a id="c4"></a>
+### 4. Descartar e refazer
+1. No GitLab, feche a MR sem mergear.
+2. **No seu terminal** (o hook impede o Claude de fazer isto): apague a branch nos repositórios tocados.
+   ```powershell
+   git -C <repo> switch dev
+   git -C <repo> branch -D feature/b3-<slug>
+   git -C <repo> push origin --delete feature/b3-<slug>
+   ```
+3. ```
+   /implement-task B3
+   ```
+   Sem a branch, nenhum ticket conta como feito: ele refaz tudo a partir de `origin/dev`.
 
-- Antes de especificar a próxima fatia, releia a linha dela no mapa e ajuste o que a anterior mudou.
-- Fatia entregue não se reescreve: a mudança vira fatia nova no mapa ou ADR nova ("Substitui ADR-000X").
-- Fatias sem dependência entre si podem ser especificadas juntas (ex.: B1 e B2 da Esteira).
+<a id="c5"></a>
+### 5. Já mergeou e apareceu problema
+Fatia entregue não se reescreve. Duas saídas:
+- **Reverter:** botão *Revert* na MR mergeada no GitLab (abre uma MR de reversão para `dev`).
+- **Corrigir para frente:** adicione ao `specs/README.md` uma linha nova (`B3b — Correção de <problema>`, depende de B3) e rode `/fatia B3b`.
 
-## O ciclo (com os pontos onde você valida)
+<a id="velha"></a>
+# Spec velha
+
+Spec escrita antes da vez dela envelhece (o código em `dev` mudou). O `/proximo` avisa (`A1: ⚠ desatualizada`) e o `/fatia` faz uma **revalidação**, não uma spec nova: mostra o que mudou, atualiza as referências e pede o seu ok. A checagem é o script `check-spec-drift.mjs`: compara a linha `base:` da spec com o `dev` de agora; spec sem `base:` conta como velha. Ele mede código e ADRs; se **a sua decisão de produto** mudou, é você quem avisa.
 
 ```
- ┌─ 1. Discovery         /grill-with-docs              Claude Code ─┐
- │  2. Arquitetura       ADR (se for decisão transversal)            │  você responde
- │  3. Spec              /to-spec <fatia>                            │
- │     ✋ VOCÊ: lê cada EARS e aprova                                ─┘
- │  4. Tickets           /to-tickets B2  → filhas B2.1…B2.N no GitLab
- │     ✋ VOCÊ: confere os Child items e o "Blocked by"
- │  5–6, 9–10.           /implement-task B2             Claude + subagentes
- │     (LLM: branch feature/b2-… → filhas com TDD, commit cada → /code-review
- │      → corrige FAIL sozinho → push → MR pra dev → relatório + notificação)
- │     ✋ VOCÊ: só se ele PARAR (o relatório diz a decisão que falta)
- │  7. Ver funcionando   na branch da MR: ng serve / dotnet run
- │     ✋ VOCÊ: testa o fluxo da spec na mão
- │  8. Design (se tem tela) /impeccable critique|audit contra o localhost
- │     ✋ VOCÊ: compara com as referências e aprova o visual
- │     ✋ VOCÊ: aprova e mergeia a MR — ou comenta e roda /implement-task B2
- │     (LLM, no próximo comando: fecha mãe + filhas, marca o mapa)
- └─11. Retro (opcional)  /retro → ajusta skill/agent/ADR que falhou
+/fatia A1 — refaça a spec sobre o código atual de dev e me mostre o que mudou
 ```
 
-### 1–3. Discovery, arquitetura e spec (Claude Code)
+<a id="paralelo"></a>
+# Paralelismo (várias fatias ao mesmo tempo)
+
+Fatias que **não se tocam** ("Depende de" feito e "Toca em" sem cruzar, ambos no mapa) rodam juntas, **um painel do Alethe por fatia**. Comece com 2.
 
 ```powershell
-cd <workspace>; claude
+node .claude/scripts/worktree-fatia.mjs B2 <slug>     # cria a área <workspace>.wt\b2\
+cd <workspace>.wt\b2; claude                           # abra o painel do Alethe aqui
+/fatia B2                                              # ou /implement-task B2
+node .claude/scripts/worktree-fatia.mjs --remove B2   # ao terminar
 ```
 
-```
-/to-spec <ID da fatia>
-```
-
-Ele pesquisa sozinho e pergunta só o que falta (passo 9). Fatia que ainda é ideia solta, fora do mapa: `/grill-with-docs Quero a fatia <nome>: <o que entrega, 2-3 frases>.` primeiro, `/to-spec` na mesma sessão.
-
-- Ele pergunta uma coisa por vez. "Não sei, recomende" é resposta válida; a recomendação dele passa a ser decisão só quando você aceita.
-- Decisão que vale pra mais de uma fatia → peça "registra isso como ADR". Decisão só da fatia fica na spec.
-- Questão de arquitetura de código (camadas, onde algo mora) → `/codebase-design` ou `/improve-codebase-architecture`.
-- Você aprova o resumo → ele grava `specs/feature/<área>/NN-nome.md`, abre a issue-mãe e linka no mapa.
-
-**Como validar a spec:** cada EARS tem que ser testável ("QUANDO a lista carrega sem fluxos, O SISTEMA DEVE mostrar o estado vazio"). EARS vago ("deve ser bonito") volta pro grill. O `## Contexto necessário` precisa listar tudo o que o executor tem que ler, inclusive referências visuais. Aprovou a spec, ela vira o contrato dos testes.
-
-### 4. Tickets (Claude Code)
-
-```
-/to-tickets specs/feature/<área>/NN-nome.md
-```
-
-Confira no GitLab: as tasks aparecem em "Child items" da issue-mãe, `Blocked by:` correto em cada uma, label de área e `ready-for-agent` em todas (a label diz "aprovada pra agente"; a ordem quem dá é o `Blocked by:`).
-
-### 5–6. Execução (Claude Code)
-
-```powershell
-cd <workspace>
-claude        # ou claude-pago / claude-free
-```
-
-```
-/implement-task B2                  # ou vazio: próxima fatia desbloqueada do mapa
-```
-
-Ele vai do cabeçalho até a MR aberta (passo 11). O que observar em cada hop, e o que fazer:
-
-| Sinal | O que significa | O que você faz |
-|---|---|---|
-| subagente devolve Completado / Arquivos / Suposições / Para o pai | normal | lê as **Suposições**: suposição errada é a origem da maioria dos retrabalhos |
-| `tests` escreve teste antes do código | TDD funcionando | — |
-| asserção afrouxada, `skip`, teste comentado | quebra da regra | interrompe; isso é FAIL mesmo que o `review` deixe passar |
-| `review` FAIL uma vez | normal | deixa o pai reabrir o executor |
-| `review` FAIL de novo | spec ou contrato ambíguo | **para**; volta pro Claude Code e corrige a spec, não o agente |
-| subagent "inventou" contrato de API | falta contrato | registra no ticket; nunca aceite formato inventado |
-| `claude-pago`/`claude-free` sem resposta | OmniRoute fora | `node omniroute-config.mjs diff` no `ai-infra` |
-
-### 7. Ver funcionando
-
-- Frontend: `cd <projeto>-frontend; npm start` → `http://localhost:4200`. API: `dotnet run` (credenciais via user-secrets, passo 3).
-- Percorra cada EARS da spec na mão. Testes verdes não substituem isso.
-- `npm test` e `npm run e2e` (quando houver) precisam passar localmente.
-
-### 8. Design (fatia com tela)
-
-Com o app rodando, no Claude Code:
-
-```
-/impeccable critique http://localhost:4200/<rota>
-/impeccable audit http://localhost:4200/<rota>
-```
-
-- `critique` = avaliação de UX/hierarquia; `audit` = acessibilidade, contraste, estados. Correções: `/impeccable adapt|harden|polish|layout|typeset`.
-- `/skill:avoid-ai-design detect` como rede de segurança contra cara de "template de IA".
-- Compare com as referências do projeto (`docs/referencias/`, `docs/design/referencias.md`). Referência é inspiração: nunca copiar pacote React.
-- Aprovado o visual, o que for padrão (cor, espaçamento, componente) sobe pro `DESIGN.md`/`src/styles.css`, nunca fica só na tela.
-
-### 9. Review (dentro do `/implement-task`)
-
-Você não chama. Quando não sobra filha, o `/implement-task` roda o `/code-review` em dois eixos paralelos: padrão do repositório (ADRs, `CLAUDE.md` do componente) e conformidade com a spec, incluindo o diff dos testes. O ponto fixo é `origin/dev`, ou seja, todas as filhas da fatia de uma vez. FAIL → ele corrige e revisa de novo (até 2 rodadas); só depois disso para e te devolve. Superfície sensível (auth, sessão, segredo, dependência nova) → `/security-review` também. Quer revisar à mão? `/code-review B2` na raiz do workspace.
-
-### 10. Entrega
-
-- PASS → o próprio Claude Code grava a prova, faz push da branch e abre a MR `B2 — …` pra `dev` (sem template-ci). Você não roda git nenhum. Com o template-ci ligado, o job `verify-code-review` confere a prova e quem abre a MR é o CI.
-- Você revisa, testa e mergeia (passo 12). Depois do merge, a fatia fecha sozinha no próximo comando.
-- Publicação (tags/qa/hml/prod) é o passo 13 e só entra quando você decidir.
-
-### 11. Retro
-
-Depois de cada fatia, nos primeiros projetos sempre: `/retro`. O que falhou vira ajuste **no lugar certo**: regra de processo → `ai-base`; prompt de subagente → `.claude/agents/*.md` (e depois no `ai-base`); decisão do projeto → ADR. Nunca corrigir só "na conversa".
-
-## Paralelismo
-
-Specs sem dependência entre si rodam ao mesmo tempo, uma sessão do Claude Code por spec no Alethe, cada uma na sua branch. Você continua sendo o gargalo das aprovações. Comece com uma de cada vez até confiar nos sinais da tabela acima.
+Cada fatia tem a sua spec, o seu review e a sua MR. Acompanhe no board por label `em-execucao` e com `/proximo` num painel livre. A mesma fatia em dois painéis é bloqueada pelo label.
+Detalhe: [orquestração, "Execução paralela"](../ai-base/docs/agents/orchestration.md).
 
 ---
 
-# Parte 3 — Primeira rodada da Esteira: frontend
+<a id="arquivos"></a>
+# Onde fica cada coisa
 
-Objetivo desta rodada: **testar o processo** (grill, arquitetura, orquestração com subagentes, review, design) construindo o frontend. Sem template-ci, sem publicação.
+| O que | Onde | Observação |
+|---|---|---|
+| **Glossário do domínio** | `CONTEXT-MAP.md` (raiz do workspace) | **Não é o `CLAUDE.md`.** `CONTEXT.md` por componente só existe se o `/domain-modeling` criar; na Esteira hoje há só o `CONTEXT-MAP.md` |
+| Instruções para o Claude | `CLAUDE.md` (workspace e de cada componente) | regras do processo e da stack, não glossário |
+| Decisões | `docs/adr/` | |
+| Mapa de fatias e status | `specs/README.md` | coluna **Status** sempre a primeira |
+| Specs | `specs/feature/<área>/NN-nome.md` | só das fatias que já tiveram a vez |
+| Comandos e agentes do projeto | `.claude/commands/`, `.claude/agents/`, `.claude/scripts/` | vêm do `ai-base` |
+| Relatório do ambiente | `docs/agents/relatorio-ambiente.md` | escrito pelo agent da A2 |
 
-Material que já existe no workspace (`ai-pipeline/esteira/`):
-- `docs/adr/0001`–`0007`: decisões tomadas (paginação, erros, BFF, stack e arquitetura do front, config em runtime, cadastro de aplicações).
-- `docs/referencias/tce-fluxo-deploy/`: telas e código do fluxo-deploy do TCE (o que você me mandou na conversa de 2026-10-21), com o que manter e o que não copiar.
-- `specs/README.md`: ordem das fatias.
+**Nomes:** o código da fatia liga tudo. Mãe `B3 — título` · tickets `B3.1 — …` · branch `feature/b3-<slug>` · commit `… (B3.1 · workspace#9)` · MR `B3 — título`. Você nunca precisa do número da issue.
 
-Ordem:
+<a id="estado"></a>
+# Estado da Esteira (2026-10-25)
 
-| # | Fatia | Quem | O que você testa nela |
-|---|---|---|---|
-| 1 | **F0 — Bootstrap do frontend** (fundação, passo 7) | Claude Code | sem spec: direto das ADRs; Claude faz `ng new` (Angular 22, zoneless, Vitest, spartan/ui, Tailwind 4, estrutura da ADR-0005, `public/config.json`, `proxy.conf.json` pra `/api`, `esteira-frontend/CLAUDE.md`) |
-| 2 | **D0 — Design system** (fundação, passo 8) | Claude Code + `impeccable` | `/impeccable init` com a direção de `docs/referencias/visual/` (maduro, nível GitLab; as telas do TCE são só referência funcional); tokens no `src/styles.css` (`@theme` + variáveis do spartan); uma página de amostra pra você aprovar |
-| 3 | **F0.5 — Shell + sessão** | `/implement-task` (`front`, `ui`, `review`) | **primeira orquestração**: layout (sidebar + header da tela 01), `auth.service`, guards, interceptors de sessão e erro |
-| 4 | **F1 — Lista e criação de fluxo** | `/implement-task` | spec com EARS de domínio; smart/dumb; tabela paginada (ADR-0002) |
-| 5 | **F2 — Detalhe + steps-bar + rotas por etapa** | `/implement-task` | componente dumb puro, serviço com escopo de rota |
-| 6 | **F3 — Deploys, análises e modal de artefatos** | `/implement-task` | densidade de dashboard, design das severidades |
-
-**Uma decisão de mapa (se o discovery não fechou):** as fatias B1–B3 (paginação, erros, sessão BFF na `esteira-api`) ainda não existem. Pra não travar o frontend: (a) o front roda contra **fixtures/mock em dev** que já seguem o contrato das ADRs, e troca pra API real quando B1–B3 entrarem; ou (b) faz B1–B3 primeiro, em paralelo com a fundação (bom teste do subagent `backend`). Recomendação: **(b) em paralelo**, e mock só onde a API ainda não chegou.
-
-**Primeiro comando:**
-
-```powershell
-cd C:\Users\danib\source\repos\orquestracao-ai\ai-pipeline\esteira
-claude
-```
-
-```
-Faça o bootstrap do esteira-frontend (fundação, passo 7 do ai-ops/COMO-CRIAR-UM-PROJETO.md),
-direto das ADR-0005 e ADR-0006. Sem spec formal: o checklist é o "Pronto quando" do passo 7.
-Leia antes: CONTEXT-MAP.md, docs/adr/, docs/referencias/. Me mostre o plano antes de rodar o ng new.
-```
-
-Depois, na mesma sessão, o design system (passo 8) e a página de amostra para você aprovar. Só então começam as specs: F0.5 primeiro (primeira orquestração com `/implement-task`).
-
----
-
-## Onde a Esteira está (2026-10-23)
-
-| Passo | Estado |
+| Parte | Estado |
 |---|---|
-| 0 | ok (infra, Claude Code + modos, OmniRoute, `glab`; `pi.dev` removido em 2026-10-24) |
-| 1 | ok — `esteira-workspace`, `esteira-api`, `esteira-frontend` no grupo `orchestration-ai/ai-pipeline/esteira` |
-| 2 | ok — workspace em `ai-pipeline/esteira/`, publicado em `main` (remote HTTPS) |
-| 3 | infra criada (manifesto, `verify` verde): banco `esteira` (`esteira_owner`/`esteira_app`), vhost `esteira`, Redis `esteira:*`, realm `esteira` + client `esteira-api` + usuário `dev`, `/metrics` na 5105. Código adequado ao contrato na fatia 00 (mergeada em `dev` da `esteira-api`) |
-| 4 | ok — skills instaladas no workspace (`.claude/skills`, `impeccable`); MCP do GitLab conectado |
-| 6 | ADRs 0001–0016 (0015: spartan/ui no lugar do PrimeNG); referências do TCE em `docs/referencias/tce-fluxo-deploy/` |
-| 7 | F0 (frontend) mergeada em `dev`; M0 (API) mergeada em `dev` |
-| 8 | D0 feito (`DESIGN.md`, `PRODUCT.md`, tokens no `styles.css`, protótipos em `docs/design/prototipos/`). **Falta:** mergear `feature/d0-tema` (frontend) em `dev` e `docs/d0-prototipos` (workspace) em `main` |
-| 9+ | specs de B1 (#3) e B2 (#2) escritas, com tickets. **B2 em execução**: B2.1–B2.4 comitadas em `feature/b2-result-e-problem-details` (`esteira-api`), falta B2.5 → `/implement-task B2` leva até a MR. Depois: B1 → B3 → F0.5 |
+| Máquina, projeto, infra, skills (A1, A2) | feitos |
+| Discovery e ADRs 0001–0017, `CONTEXT-MAP.md` (A3) | feitos |
+| Fundação (A4): F0 (front), M0 (API), D0 (design) | em `dev` |
+| Fatias feitas | B2, B1 |
+| **Em andamento** | **B3** (sessão BFF): spec escrita, aguardando seu ok |
+| Próximas | F0.5 → A1 (spec antiga, será revalidada) → E1 … E5 (specs nascem na vez de cada uma) |
+
+Para o estado de agora, não use esta tabela: rode `/proximo`.

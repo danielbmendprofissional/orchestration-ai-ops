@@ -241,7 +241,7 @@ Sem comando solto (era aqui que o RabbitMQ dava permissão pro `guest`, que nem 
 
    (Não usar `Get-Content ... | dotnet user-secrets set`: no PowerShell 5.1 o pipe põe BOM e o `dotnet` recusa o JSON.)
 
-Senhas do projeto: geradas pelo script em `ai-infra/container/.env` (`PROJECT_<PROJETO>_*`). Normalmente quem faz isso é o agent `local-environment-config` (`COMO-CRIAR-UM-PROJETO.md`, passo 3).
+Senhas do projeto: geradas pelo script em `ai-infra/container/.env` (`PROJECT_<PROJETO>_*`). Normalmente quem faz isso é o agent `local-environment-config` (`COMO-CRIAR-UM-PROJETO.md`, seção A2).
 
 ## 12. Google Drive for Desktop (destino do backup)
 
