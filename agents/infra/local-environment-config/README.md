@@ -6,7 +6,7 @@ Agent de configuração da infra compartilhada (repo `ai-infra`). Roda com **Cla
 
 1. Abre um terminal **dentro desta pasta** (não na raiz do `ai-ops`, não dentro de `ai-infra`):
    ```powershell
-   cd "C:\Users\danib\source\repos\orquestracao-ai\ai-ops\agents\infra\local-environment-config"
+   cd "<raiz-do-workspace>\ai-ops\agents\infra\local-environment-config"
    claude
    ```
 2. Descreve o pedido — três casos:

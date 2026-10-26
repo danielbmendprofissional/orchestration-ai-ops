@@ -7,7 +7,7 @@ As versões ficam fixas no compose de propósito (reprodutível) — este agent 
 ## Como rodar
 
 ```powershell
-cd "C:\Users\danib\source\repos\orquestracao-ai\ai-ops\agents\infra\infra-versions-config"
+cd "<raiz-do-workspace>\ai-ops\agents\infra\infra-versions-config"
 claude
 ```
 

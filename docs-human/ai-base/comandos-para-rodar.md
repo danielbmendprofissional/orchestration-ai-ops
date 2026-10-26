@@ -105,7 +105,7 @@ Digite `/imp` + Tab: tem que aparecer `implement-task`. `/agents` lista os subag
 3. Em cada painel, na raiz do workspace, abra o modo que quiser:
 
 ```powershell
-cd "C:\Users\danib\source\repos\orquestracao-ai\ai-pipeline\<projeto>"
+cd "<raiz-do-workspace>\ai-pipeline\<projeto>"
 claude          # seu plano
 claude-pago     # OmniRoute, DeepSeek → Luna
 claude-free     # OmniRoute, só gratuitos
@@ -122,7 +122,7 @@ Nenhuma dessas skills é escrita à mão neste repo: todas vêm de fora e são r
 **Terminal: "PowerShell" (normal)**, dentro da pasta do repo:
 
 ```powershell
-cd "C:\Users\danib\source\repos\orquestracao-ai\ai-base"
+cd "<raiz-do-workspace>\ai-base"
 ```
 
 **Matt Pocock (25 skills de engenharia — discovery, spec, tickets, TDD, review, apoio: debug, merge conflicts, retro, handoff) — ✅ já instalado, ver `docs/log-execucao.md`:**

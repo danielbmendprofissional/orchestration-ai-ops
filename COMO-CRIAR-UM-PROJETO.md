@@ -11,10 +11,10 @@ Sempre que for trabalhar, nesta ordem. **Todos os comandos no PowerShell.** Exem
 | # | O que abrir | Como | Pronto quando |
 |---|---|---|---|
 | 1 | **Docker Desktop** | abrir o aplicativo | ícone verde, "running" |
-| 2 | **Infra compartilhada** (Postgres, Redis, RabbitMQ, Keycloak, observabilidade, OmniRoute) | `cd C:\Users\danib\source\repos\orquestracao-ai\ai-infra\configs\infra` e `node infra-config.mjs up` | termina com `✔ tudo conferido` (nunca `docker compose up` puro) |
+| 2 | **Infra compartilhada** (Postgres, Redis, RabbitMQ, Keycloak, observabilidade, OmniRoute) | `cd <raiz-do-workspace>\ai-infra\configs\infra` e `node infra-config.mjs up` | termina com `✔ tudo conferido` (nunca `docker compose up` puro) |
 | 3 | **Conferir a infra** nas URLs abaixo | abrir no navegador | cada uma abre |
-| 4 | **Editor** | `code C:\Users\danib\source\repos\orquestracao-ai\ai-pipeline\esteira` (VS Code, com o profile `dotnet-backend` para a API e `angular-frontend` para o front). Outro editor, como o Codex: abra a mesma pasta do **workspace** | a pasta do workspace aberta |
-| 5 | **Claude** (na raiz do workspace) | `cd C:\Users\danib\source\repos\orquestracao-ai\ai-pipeline\esteira` e `claude` (ou `claude-pago` / `claude-free`; no Alethe, um painel por fatia) | abre o prompt |
+| 4 | **Editor** | `code <raiz-do-workspace>\ai-pipeline\esteira` (VS Code, com o profile `dotnet-backend` para a API e `angular-frontend` para o front). Outro editor, como o Codex: abra a mesma pasta do **workspace** | a pasta do workspace aberta |
+| 5 | **Claude** (na raiz do workspace) | `cd <raiz-do-workspace>\ai-pipeline\esteira` e `claude` (ou `claude-pago` / `claude-free`; no Alethe, um painel por fatia) | abre o prompt |
 | 6 | **Situação do git** | no Claude: `/situacao`, e peça *"pode alinhar e limpar"* para ele rodar os comandos de alinhar e limpar | "Pronto para começar a próxima fatia? SIM" |
 | 7 | **Próximo passo** | no Claude: `/proximo` | você sabe o que fazer |
 | 8 | **API** | `cd ...\esteira\esteira-api` e `dotnet run --project src\Esteira.Api --launch-profile http` | `http://localhost:5105/health` responde |
@@ -76,10 +76,10 @@ Variáveis do projeto no `.env` têm o nome em maiúsculas: para o projeto `este
 
 ```powershell
 # copiar uma senha para a área de transferência, SEM mostrar na tela (troque o nome da variável)
-(Get-Content C:\Users\danib\source\repos\orquestracao-ai\ai-infra\container\.env | Where-Object { $_ -match '^PROJECT_ESTEIRA_KEYCLOAK_DEV_PASSWORD=' }) -replace '^[^=]+=','' | Set-Clipboard
+(Get-Content <raiz-do-workspace>\ai-infra\container\.env | Where-Object { $_ -match '^PROJECT_ESTEIRA_KEYCLOAK_DEV_PASSWORD=' }) -replace '^[^=]+=','' | Set-Clipboard
 
 # listar só os NOMES das variáveis de um projeto (sem valores)
-Select-String -Path C:\Users\danib\source\repos\orquestracao-ai\ai-infra\container\.env -Pattern '^PROJECT_ESTEIRA_' | ForEach-Object { ($_.Line -split '=')[0] }
+Select-String -Path <raiz-do-workspace>\ai-infra\container\.env -Pattern '^PROJECT_ESTEIRA_' | ForEach-Object { ($_.Line -split '=')[0] }
 ```
 
 Depois é só colar (Ctrl+V) no campo de senha. Se o valor estiver entre aspas no `.env`, abra o arquivo no VS Code e copie sem elas.
