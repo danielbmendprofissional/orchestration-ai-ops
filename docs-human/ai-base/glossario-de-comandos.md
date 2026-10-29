@@ -89,7 +89,11 @@ O modo é escolha de custo; o processo é o mesmo nos três. Trocar de modo = fe
 | `node .claude/scripts/situacao.mjs [--sem-mr] [--so-projeto]` | O que o `/situacao` roda. Exit 1 se há pendência sua (prioridade 1 ou 2) |
 | `node .claude/scripts/check-spec-drift.mjs [<spec>]` | Diz se uma spec **envelheceu** (commits novos em `dev` que tocam o que ela cita; sem linha `base:` = velha). Sem argumento: todas as pendentes. O `/proximo` e o `/fatia` já rodam |
 | `node .claude/scripts/check-spec-drift.mjs --stamp <spec>` | Grava a linha `base:` (sha de `dev` de agora) na spec. O `/fatia` faz ao aprovar |
-| `node .claude/scripts/check-escopo.mjs <repo> <base> --allow … --deny …` | Confere o diff de uma task: fora do escopo, teste apagado, `skip`/`only` (o `/implement-task` já roda) |
+| `node .claude/scripts/check-escopo.mjs <repo> <base> --allow … --deny …` | Confere o diff de uma task: fora do escopo, teste apagado, `skip`/`only`, **teste novo sem a marca da fatia** (o `/implement-task` já roda) |
+| `node .claude/scripts/status-specs.mjs` | Tabela do status **real** de todas as fatias do mapa (zero token): cruza o `specs/README.md` com a issue-mãe, a MR mergeada em `dev` e os testes marcados. Estados: `implementada`, `em execução`, `não iniciada`, `inconsistente` (o mapa e a evidência não batem; o motivo vem na linha). Exit 1 se houver inconsistente. Demora ~10 s por consultar o GitLab; `--sem-gitlab` pula, `--fetch` atualiza o git antes |
+| `node .claude/scripts/status-specs.mjs B2` | Uma linha só, para uma fatia. Com `--pre-entrega`, é o gate que o `/implement-task` roda antes da review: falha se nenhum teste leva a marca da fatia |
+
+**Marca da fatia nos testes:** todo teste novo leva o código da fatia (`B2`, não `B2.5`), e é isso que o `status-specs.mjs` conta. .NET: `[Trait("Fatia", "B2")]` na classe · Vitest: `describe('[B2] Nome', …)` · Playwright: `{ tag: '@B2' }`. Rodar só a fatia: `dotnet test --project <projeto de teste> -- --filter-trait "Fatia=B2"`. Regra completa em `docs/agents/orchestration.md`, "Marca da fatia nos testes".
 | `node omniroute-config.mjs diff` (no `ai-infra`) | Diagnóstico quando `claude-pago`/`claude-free` não respondem |
 
 ## 8. Quem entra sozinho (você não chama)
