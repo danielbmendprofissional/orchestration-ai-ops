@@ -94,6 +94,7 @@ O modo é escolha de custo; o processo é o mesmo nos três. Trocar de modo = fe
 | `node .claude/scripts/status-specs.mjs B2` | Uma linha só, para uma fatia. Com `--pre-entrega`, é o gate que o `/implement-task` roda antes da review: falha se nenhum teste leva a marca da fatia |
 
 **Marca da fatia nos testes:** todo teste novo leva o código da fatia (`B2`, não `B2.5`), e é isso que o `status-specs.mjs` conta. .NET: `[Trait("Fatia", "B2")]` na classe · Vitest: `describe('[B2] Nome', …)` · Playwright: `{ tag: '@B2' }`. Rodar só a fatia: `dotnet test --project <projeto de teste> -- --filter-trait "Fatia=B2"`. Regra completa em `docs/agents/orchestration.md`, "Marca da fatia nos testes".
+| `node infra-config.mjs secrets <projeto> --csproj=<csproj da API>` (em `ai-infra\configs\infra`) | Grava nos user-secrets da API as chaves do contrato `docs/agents/infra-local.md` (Postgres, RabbitMQ, Redis, Keycloak). Rode depois que o `.csproj` existir (precisa de `<UserSecretsId>`) e depois de todo `apply` que troque segredo; reinicie a API. Confira com `dotnet user-secrets list --project <csproj>` |
 | `node omniroute-config.mjs diff` (no `ai-infra`) | Diagnóstico quando `claude-pago`/`claude-free` não respondem |
 
 ## 8. Quem entra sozinho (você não chama)

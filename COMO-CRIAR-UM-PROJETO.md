@@ -173,6 +173,8 @@ O agent mostra o plano e, com o seu ok, faz tudo isto:
 - configura `.mcp.json`, skills, `impeccable` e skills de segurança, e roda o smoke test;
 - escreve `docs/agents/relatorio-ambiente.md` com acessos e pendências.
 
+**User-secrets da API (chaves de `docs/agents/infra-local.md`):** o agent grava as chaves do contrato (`ConnectionStrings:Postgres`, `RabbitMQ:*`, `Redis:*`, `Keycloak:*`…) nos user-secrets da API com `node infra-config.mjs secrets <projeto> --csproj=<caminho do csproj da API>`, **mas só se o `.csproj` já existir**. Projeto novo ainda não tem API nesta etapa, então esse passo fica pendente no `relatorio-ambiente.md`: **depois de criar a API (A4/primeira fatia de backend), rode de novo** `Etapa 2, projeto EXISTENTE em <caminho>` ou, direto no terminal, o comando acima (em `ai-infra\configs\infra`). O csproj precisa de `<UserSecretsId>` (`dotnet user-secrets init --project <csproj>`, uma vez). Repita depois de todo `apply` que troque segredo e reinicie a API. Conferir: `dotnet user-secrets list --project <csproj>` (só os nomes).
+
 **Projeto existente** não tem o código tocado: o agent só recria o ambiente e gera uma spec de adequação (`specs/feature/infra/00-adequacao-ambiente.md`), que você executa depois como uma fatia comum.
 
 **Você faz:** aprovar o plano, **commitar e dar push** (o agent nunca faz) e decidir o que ele marcar como "depende de você".
