@@ -51,6 +51,7 @@ Variações:
 
 | Comando | Para quê |
 |---|---|
+| `/design-init [novo\|existente]` | **Começa o design**: confirma novo ou existente, confere referências e ADRs (faz o grill se faltar) e abre a sessão de design com o prompt montado. Fundação, sem spec ([guia](../../COMO-CRIAR-UM-PROJETO.md#design)) |
 | `/impeccable init` | Gera `DESIGN.md`/`PRODUCT.md` do projeto (uma vez) |
 | `/impeccable critique <url>` · `audit <url>` | Avalia UX/hierarquia · acessibilidade e estados, contra o localhost |
 | `/impeccable adapt\|harden\|polish\|layout\|typeset` | Corrige o que a crítica apontou |

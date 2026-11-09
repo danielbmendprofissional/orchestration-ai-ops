@@ -106,6 +106,7 @@ Abra `http://localhost:4200` (nunca direto a porta da API). Reiniciou a infra ou
 | criar um projeto novo, ou trazer um que já existe | [A2](#a2-projeto-novo-ou-existente) |
 | entender o que o discovery gera (e o que não gera) | [A3](#a3-discovery-e-decisões) |
 | **conferir se o mapa está completo** | **[Conferir o mapa](#conferir-o-mapa)** |
+| **começar o design (app do zero ou já existente): referências, prompt e aprovação** | **[Design](#design)** |
 | **saber quantas fatias faltam e como o fluxo anda** | **[Como o fluxo anda](#como-o-fluxo-anda)** |
 | fazer a próxima fatia | [Parte B](#parte-b-rotina-por-fatia) |
 | saber quando as specs são geradas | [B2](#b2-quando-as-specs-são-geradas) |
@@ -252,6 +253,98 @@ Cada item aponta a origem (arquivo e seção) e a fatia que o cobre, ou "sem fat
 | item que **nenhuma ADR cobre** | `/grill-with-docs` sobre ele antes de virar fatia |
 
 O `/mapa` nunca altera nada sozinho; `aplicar` só depois do seu ok, e a mudança vai no próximo commit de docs. Detalhe: [`/mapa`](../ai-base/.claude/commands/mapa.md).
+
+---
+
+# Design
+
+**Para começar, digite `/design-init`** na raiz do workspace. O design é uma **fundação**: não tem spec nem tickets (como a [A4](#a4-fundação-bootstrap-e-design)). O comando faz o caminho todo, parando para perguntar:
+
+1. confirma com você se o projeto é **novo ou existente**;
+2. confere as **referências** (`docs/referencias/`) e pergunta se falta alguma;
+3. confere as **ADRs** de frontend e de design; se faltar, roda o `/grill-with-docs` ali mesmo, na mesma conversa;
+4. monta o **prompt de design** com as referências e ADRs citadas pelo caminho, mostra o plano e conduz com perguntas e exemplos (`ui-ux-pro-max-skill` para a direção, `/impeccable init` para gerar `DESIGN.md` e `PRODUCT.md`).
+
+As ferramentas já vêm instaladas pelo agent da [A2](#a2-projeto-novo-ou-existente); você não instala nada. As seções abaixo explicam cada etapa e trazem os prompts, para você entender o que o comando faz ou para fazer à mão.
+
+```
+D1 reunir referências  →  D2 pedir o design (prompt)  →  D3 aprovar a amostra  →  fatias com tela
+```
+
+## D1 Reunir as referências (discovery visual)
+
+Referência é **o que você quer que ele imite**. Sem ela, o Claude chuta um estilo (e cai no "cara de IA"). Faça antes de pedir o design.
+
+**1. Guarde o material na pasta do projeto**, em `docs/referencias/`:
+
+| O que | Onde | Como |
+|---|---|---|
+| **Aparência** (prints de sites e produtos que você admira, logo, paleta) | `docs/referencias/visual/` | salve os prints (`.png`) e crie/atualize o `README.md` da pasta |
+| **Funcionalidade** (telas e código de um sistema que já existe, para herdar o que ele faz) | `docs/referencias/<nome-do-sistema>/` | `telas/` com prints e `codigo/` com os arquivos, mais um `README.md` dizendo o que é cada um e o que **não** copiar |
+
+O `README.md` de `visual/` precisa dizer, **para cada print, o que observar**, e registrar a **direção pedida** com data. É assim que a Esteira fez: *"plataforma de engenharia madura, no nível do GitLab, densa, status discretos"*, *"escuro e monocromático como Vercel e Railway, com um azul de marca"*, e uma linha por print (`vercel-home.png` → "preto quase puro, botão branco só na ação principal"). Referência só de aparência não vale como funcional, e vice-versa: diga qual é qual.
+
+**2. Feche a direção na conversa.** Na sessão do Claude, no discovery ([A3](#a3-discovery-e-decisões)), o item 3 da pauta é exatamente este: *"Direção de design: referências e tom → `docs/referencias/visual/`"*. Se o discovery já passou, rode só esse item:
+```
+/grill-with-docs Direção de design do <projeto>. Referências em docs/referencias/visual/ (e funcional em docs/referencias/<sistema>/).
+Fechar sem item em aberto: tom (denso/espaçoso, claro/escuro), cor de marca, tipografia, como cada status aparece, o que NÃO queremos.
+Registrar a decisão no README de docs/referencias/visual/.
+```
+
+**3. (Opcional) Protótipos descartáveis.** Para validar telas **antes** de qualquer Angular, peça `/prototype` (HTML simples, dados fictícios). Os aprovados ficam em `docs/design/prototipos/` e viram a referência visual das specs. A Esteira fez assim: 8 telas em HTML aprovadas no D0, depois o Angular. O `/mapa` lê essa pasta para conferir se toda tela tem fatia.
+
+**Pronto quando:** `docs/referencias/visual/README.md` tem a direção e o que observar em cada print, e você não tem mais dúvida de "como deve parecer".
+
+## D2 Pedir o design (o prompt)
+
+O `/design-init` monta e envia este prompt por você, com os caminhos reais. À mão: abra o Claude **na raiz do workspace** (`claude`) e mande o prompt do seu caso. O Claude lê as referências, gera a direção, roda `/impeccable init` (que cria `DESIGN.md` e `PRODUCT.md`: **esses dois passam a ser a fonte de verdade do design**), mapeia os tokens para `src/styles.css` e monta uma **página de amostra**. Ele mostra o plano antes de mexer.
+
+### App do zero
+
+```
+Faça o design system do <projeto>-frontend (fundação, sem spec).
+
+Leia antes: docs/referencias/visual/README.md e os prints dessa pasta (direção e o que observar em cada um),
+docs/design/prototipos/ (se houver), CONTEXT-MAP.md, os ADRs de frontend e docs/design/ (tokens.md é só ponto de partida).
+
+Siga a cadeia de docs/design/principios.md: direção de design com a skill ui-ux-pro-max-skill a partir das referências,
+depois /impeccable init para gerar DESIGN.md e PRODUCT.md, usando tokens.md como seed consciente.
+Mapeie os tokens para src/styles.css (@theme do Tailwind e as variáveis do spartan no :root). Nada de tema de fábrica
+do spartan intocado, fonte ou cor "default" sem decisão.
+
+Perfil: <dashboard/app corporativo denso | outro>. Tom: <o que você decidiu no D1>.
+Entregue uma página de amostra (cores, tipografia, espaçamento, botões, formulário, tabela, badges de status, estados vazio/erro/carregando) para eu aprovar.
+Mostre o plano antes de começar. Trabalhe numa branch e não faça merge.
+```
+
+### App que já existe
+
+```
+Registre o design do <projeto>-frontend que JÁ existe (fundação, sem spec). Não invente um visual novo e não reescreva telas.
+
+Leia: o código atual do front (estilos, tema, componentes em uso), docs/referencias/ (se houver) e docs/design/.
+Rode /impeccable init descrevendo o que está em uso hoje: cores, fontes, espaçamento, componentes. Gere DESIGN.md e PRODUCT.md.
+Alinhe src/styles.css para que os tokens existam como variáveis, sem mudar a aparência atual.
+
+Depois, com a app rodando em http://localhost:4200, rode /impeccable detect e /impeccable audit e me entregue o relatório
+agrupado por prioridade (P0/P1). NÃO corrija nada ainda: eu decido o que vira fatia.
+Mostre o plano antes de começar.
+```
+
+Se, depois do relatório, você **quer um visual novo**, pare no relatório e rode o prompt de "App do zero" apontando as referências novas.
+
+## D3 Aprovar e seguir
+
+1. Suba o front (`npm start`) e abra a página de amostra (ou, no app existente, leia o relatório do `audit`).
+2. Responda: `aprovo`, ou `ajuste: <o que mudar>` (ele corrige e mostra de novo).
+3. **App existente:** cada grupo de achados que você quer corrigir vira linha no mapa: `/mapa` → aprove → `/mapa aplicar`, e cada uma segue a [rotina por fatia](#parte-b-rotina-por-fatia).
+4. Aprovado, mergeie a branch em `dev` e peça: *"marque a fundação D0 como feita no mapa"* (fundação não tem issue, é você quem pede; é isso que deixa a próxima spec partir de uma base que existe).
+
+**Pronto quando:** `DESIGN.md` e `PRODUCT.md` existem, `src/styles.css` tem os tokens, a amostra foi aprovada e está em `dev`.
+
+**Nas fatias com tela você não faz nada de design:** o agent `ui` lê o `DESIGN.md`, implementa, roda `/impeccable detect` e `audit` contra o localhost e corrige. Na MR ([B5](#b5-revisar-a-mr-e-mergear)) você só confere com `/impeccable critique <url>` ou `audit <url>`.
+
+Detalhe: [princípios](../ai-base/docs/design/principios.md) · [tokens](../ai-base/docs/design/tokens.md) · [componentes](../ai-base/docs/design/component-library.md) · [catálogo de referências](../ai-base/docs/design/referencias.md).
 
 ---
 

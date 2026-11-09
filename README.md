@@ -4,8 +4,8 @@ Repo geral de AI apartados de projetos, inclui agents, skills, instructions que 
 
 ## Arquivos da raiz
 
-- `COMO-CRIAR-UM-PROJETO.md` — roteiro humano, do zero até a esteira (a IA não lê).
-- `PENDENCIAS.md` — pendências do ecossistema (ai-base, ai-infra, ai-ops, OmniRoute, Kubernetes). Pendência de um projeto fica no repo do projeto.
+- [`COMO-CRIAR-UM-PROJETO.md`](COMO-CRIAR-UM-PROJETO.md) — roteiro humano, do zero até a esteira (a IA não lê).
+- [`PENDENCIAS.md`](PENDENCIAS.md) — pendências do ecossistema (ai-base, ai-infra, ai-ops, OmniRoute, Kubernetes). Pendência de um projeto fica no repo do projeto.
 
 ## Estrutura - Agents
 
