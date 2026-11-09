@@ -4,7 +4,7 @@ Repo geral de AI apartados de projetos, inclui agents, skills, instructions que 
 
 ## Arquivos da raiz
 
-- [`COMO-CRIAR-UM-PROJETO.md`](COMO-CRIAR-UM-PROJETO.md) — roteiro humano, do zero até a esteira (a IA não lê).
+- [`COMO-CRIAR-UM-PROJETO.md`](https://github.com/danielbmendprofissional/orchestration-ai-base/blob/main/docs-human/COMO-CRIAR-UM-PROJETO.md) — roteiro humano, do zero até a esteira (a IA não lê). Mora no `ai-base` (`docs-human/`), junto do [glossário de comandos](https://github.com/danielbmendprofissional/orchestration-ai-base/blob/main/docs-human/glossario-de-comandos.md), para quem clonar só o `ai-base`.
 - [`PENDENCIAS.md`](PENDENCIAS.md) — pendências do ecossistema (ai-base, ai-infra, ai-ops, OmniRoute, Kubernetes). Pendência de um projeto fica no repo do projeto.
 
 ## Estrutura - Agents
