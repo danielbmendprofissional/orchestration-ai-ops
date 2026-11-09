@@ -37,7 +37,10 @@ Clonar o `ai-base` atual numa pasta temporária, read-only (`git clone --depth 1
 ### Bloco A — ambiente de IA (arquivos de processo)
 
 Escopo e regras de comparação (iguais pra qualquer origem):
-- `docs/agents/*.md`, `.claude/hooks/`, `.claude/agents/*.md`, `.claude/commands/`, `docs/design/*.md` — processo fixo, sem motivo pra divergir do template. Exceções: `tokens.md` sai do diff se existir `DESIGN.md`; campo `model:` de `.claude/agents` diferente é sempre "Depende do humano" (custo).
+- `docs/agents/*.md`, `docs/workflow.md`, `.claude/hooks/`, `.claude/agents/*.md`, `.claude/commands/`, `.claude/scripts/`, `docs/design/*.md` — processo fixo, sem motivo pra divergir do template. Exceções: `tokens.md` sai do diff se existir `DESIGN.md`; campo `model:` de `.claude/agents` diferente é sempre "Depende do humano" (custo).
+- **Comando e script andam juntos.** Um comando de `.claude/commands/` chama scripts de `.claude/scripts/` (ex.: `/fatia` → `check-spec-drift.mjs`, `check-tickets.mjs`; `/situacao` → `situacao.mjs`; `/implement-task` → `worktree-fatia.mjs`, `check-escopo.mjs`, `status-specs.mjs`). Antes de montar o plano, `grep` nos comandos a atualizar por `.claude/scripts/<nome>`: todo script citado e ausente (ou diferente) no projeto entra no plano junto com o comando. Nunca deixar o comando novo sem o script que ele chama.
+- `.claude/settings.json` = **Revisar manualmente**, com a lista concreta do que falta em relação ao template (hooks registrados, permissões do processo). O arquivo pode ter permissões do próprio projeto: nunca sobrescrever.
+- Comando novo ou apagado no `ai-base` desde a rodada anterior (compare com o sha de "Base do template"): destacar no plano ("novo: `/design-init`"), e no relatório avisar o humano de que existe e para que serve (uma linha, do `description:` do comando).
 - **Nunca compara:** código, `CONTEXT.md`, `docs/adr/` existentes, `specs/` existentes, `.claude/skills/` (instala por comando, passo 3 dos "Passos"), `.mcp.json` (passo 2 dos "Passos").
 - `templates/*.gitlab-ci.yml` vs `.gitlab-ci.yml` de cada repositório: só `include` (`project`/`ref`) e variáveis fixas.
 
