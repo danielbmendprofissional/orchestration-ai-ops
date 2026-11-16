@@ -38,7 +38,7 @@ Campo `"metrics": "host.docker.internal:<porta>"` do projeto no `projects.json` 
 
 ## 7. Ligar a esteira de CI/CD
 
-Em cada repositório de código do workspace (`<projeto>-api`, `<projeto>-frontend` — ver `docs/agents/workspace.md`), `.gitlab-ci.yml` copiado de `templates/` do `ai-base`: `include` do `template-ci` (`ref: v2.0.0`), `APP_TECHNOLOGY` + variáveis da tecnologia, `REVIEW_GATE_ENABLED: "true"` (gate de `feature/*` → MR pra `dev`, precisa de `GITLAB_TOKEN` no projeto). Setup único (runner privileged, GitLab Agent, pull secret, Secret do banco, variáveis por ambiente) no `template-ci/README.md` — ver `docs/agents/orchestration.md` e `docs/agents/esteira-deploy.md` pro fluxo completo (tag `vX.Y.Z-rcN`, promoção dev→qa→hml→main).
+Em cada repositório de código do workspace (`<projeto>-api`, `<projeto>-frontend` — ver `docs/agents/workspace.md`), `.gitlab-ci.yml` copiado de `templates/` do `ai-base`: `include` do `template-ci` (`ref: v2.0.0`), `APP_TECHNOLOGY` + variáveis da tecnologia, `REVIEW_GATE_ENABLED: "true"` (gate de `feature/*` → MR pra `main`, precisa de `GITLAB_TOKEN` no projeto). Setup único (runner privileged, GitLab Agent, pull secret, Secret do banco, variáveis por ambiente) no `template-ci/README.md` — ver `docs/agents/orchestration.md` e `docs/agents/esteira-deploy.md` pro fluxo completo (trunk-based: `main` única, Artefato por SHA, Entrega → qa → hml → produção, versão `X.Y.Z` sem "v").
 
 **Ainda não validado no GitLab real:** o `template-ci` v2 (deploy em Kubernetes, gate de review, scanners) foi testado localmente em Docker, mas o encadeamento completo de pipelines ainda não rodou no gitlab.com — primeiro projeto real é o teste ponta a ponta.
 
@@ -58,7 +58,7 @@ Nada abaixo precisa de Kubernetes nem AWS — roda tudo local, em cima do que os
 - Specs viram issues no GitLab (`docs/agents/issue-tracker.md`).
 - O Claude Code executa via `/implement-task` (modo `claude`, `claude-pago` ou `claude-free`), um painel do Alethe por spec (`docs/agents/orchestration.md`).
 - `/code-review` manual (sua sessão Claude Code, seu Pro) antes de cada push de `feature/*`.
-- Esteira dev→qa→hml→main entra em jogo quando você decidir publicar de verdade (setup único no `template-ci/README.md`).
+- A esteira de deploy (Entrega → qa → hml → produção) entra em jogo quando você decidir publicar de verdade (setup único no `template-ci/README.md`).
 
 Auditoria manual de segurança quando quiser (não é automática): skills do passo 13 de `comandos-para-rodar.md`, fluxo completo em `docs/agents/security-review.md`.
 
@@ -66,7 +66,7 @@ Auditoria manual de segurança quando quiser (não é automática): skills do pa
 
 Isso valida o desenho de Kubernetes (os 4 operators, GitLab Agent conectado) sem gastar nada de AWS. **Não substitui o passo 11** — é treino, cluster descartável, sem TLS real. Passo a passo completo: `docs-human/kubernetes-local.md`.
 
-Resumo da ordem lá dentro: instalar `k3d` → subir 2 clusters (`qa`/`hml` locais) → cert-manager com `ClusterIssuer` self-signed (sem Let's Encrypt, sem domínio público) → os 4 operators (CloudNativePG, Redis Operator, RabbitMQ Cluster Operator, Keycloak Operator) em cada cluster → registrar o GitLab Kubernetes Agent em cada um.
+Resumo da ordem lá dentro: instalar `k3d` → subir 2 clusters (`esteira-nao-prod` com os namespaces `qa`, `hml` e `preview`; `esteira-prd-local` só produção) → cert-manager com `ClusterIssuer` self-signed (sem Let's Encrypt, sem domínio público) → os 4 operators (CloudNativePG, Redis Operator, RabbitMQ Cluster Operator, Keycloak Operator) em cada cluster → NetworkPolicy no `esteira-nao-prod` → registrar o GitLab Kubernetes Agent em cada um.
 
 **Importante:** isso só valida cluster + operators + Agent conectado. Pra publicar a aplicação nesses clusters pela esteira: `KUBE_CONTEXT`/`K8S_NAMESPACE`/`APP_URL` por ambiente no projeto (ver `template-ci/README.md`).
 
@@ -78,7 +78,7 @@ Aqui entra o Kubernetes de produção. Kit de bootstrap completo (comandos exato
 - C) Registrar o GitLab Kubernetes Agent (novo registro — o do passo 10 era local, não migra).
 - D) Instalar os 4 operators (mesmos manifests/Helm charts do passo 10, sem mudar nada).
 
-Repete A→B→C→D pra cada cluster — 1 por projeto × ambiente (`qa`, `hml`, `master`), conforme Opção 3 decidida. Dados não vêm do cluster local automaticamente — se quiser levar algo, é `pg_dump`/restore manual.
+Na AWS o que muda é o **Destino de produção** (`local` → `aws`): A→B→C→D para o cluster de produção; o `esteira-nao-prod` continua local (ADR-0020, a "Opção 3" de um cluster por projeto × ambiente foi substituída). Dados não vêm do cluster local automaticamente — se quiser levar algo, é `pg_dump`/restore manual.
 
 ## 12. Segurança
 

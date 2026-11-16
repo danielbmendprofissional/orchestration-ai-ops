@@ -51,17 +51,22 @@ winget install Kubernetes.kubectl
 
 ## 3. Confirmar com o humano antes de consumir recurso real
 
-Antes de criar cluster: avisar que isso consome RAM/CPU real enquanto estiver de pé, e os nomes que serão usados (`<projeto>-qa-local`, `<projeto>-hml-local` — `<projeto>` = nome do projeto da vez). Só depois da confirmação, seguir.
+Antes de criar cluster: avisar que isso consome RAM/CPU real enquanto estiver de pé (dois clusters + operators; a memória real nunca foi medida), e os nomes que serão usados: **`esteira-nao-prod`** e **`esteira-prd-local`** (ADR-0020 da Esteira; os dois clusters são da máquina, não de um projeto). Só depois da confirmação, seguir.
 
-## 4. Criar os 2 clusters (qa e hml, isolados)
+## 4. Criar os 2 clusters (não-produção e produção, isolados)
+
+`esteira-nao-prod` hospeda os namespaces `qa`, `hml`, `preview` (nginx do preview estático, 7 dias, até 5 ao mesmo tempo) e `review-<fatia>` (só app real de Fatia de `risco: alto`, até 2 ao mesmo tempo; criados e destruídos pelo `template-ci`, nunca por este agent). **Não existe namespace `dev`.** `esteira-prd-local` é só produção (Destino `local`; trocar para `aws` é mudar o Destino na Esteira).
 
 ```powershell
-k3d cluster create <projeto>-qa-local --agents 1
-k3d cluster create <projeto>-hml-local --agents 1
+k3d cluster create esteira-nao-prod --agents 1
+k3d cluster create esteira-prd-local --agents 1
 kubectl config get-contexts
+kubectl --context k3d-esteira-nao-prod create namespace qa
+kubectl --context k3d-esteira-nao-prod create namespace hml
+kubectl --context k3d-esteira-nao-prod create namespace preview
 ```
 
-Troca de contexto: `kubectl config use-context k3d-<projeto>-qa-local` (ou `-hml-local`).
+Troca de contexto: `kubectl config use-context k3d-esteira-nao-prod` (ou `k3d-esteira-prd-local`).
 
 ## 5. cert-manager, Issuer self-signed (sem domínio público, sem Let's Encrypt)
 
@@ -120,23 +125,29 @@ kubectl create -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resour
 
 Depois de cada operator instalado: criar 1 CR mínimo (`Cluster`/`Redis`/`RabbitmqCluster`/`Keycloak`, 1 réplica) só pra confirmar que o operator provisiona de verdade.
 
+O review com app real usa estes serviços **compartilhados no `esteira-nao-prod`, com isolamento lógico por Fatia** (banco, vhost e prefixo Redis por Fatia; realm Keycloak compartilhado). O contrato de chaves (`ConnectionStrings:Postgres`, `RabbitMQ:*`, `Keycloak:*`, `Redis:KeyPrefix`) não muda.
+
+## 6b. NetworkPolicy (só `esteira-nao-prod`)
+
+Uma política por namespace (`qa`, `hml`, `preview`, `review-*`) que **nega tráfego entre namespaces** por padrão e libera só o que cada um precisa (Ingress do Traefik; serviços compartilhados, no review). Política própria para o ZAP (DAST ativo no `qa`, passivo no `hml` e em produção depois da Liberação) alcançar **só o namespace alvo**. Aplicar os manifests de NetworkPolicy do `template-ci`/`ai-ops` (versionados), nunca à mão. Produção nunca divide cluster com o que sofre DAST.
+
 ## 7. GitLab Kubernetes Agent — sempre parar aqui
 
-Token de registro só sai clicando na UI do GitLab (projeto → Operate → Kubernetes clusters → Connect a cluster). Não usar Personal Access Token pra isso via API mesmo sendo tecnicamente possível — escopo largo demais pra um agent segurar. **Parar aqui**, pedir pro humano gerar 1 token por cluster (2, um por ambiente) e colar de volta.
+Token de registro só sai clicando na UI do GitLab (projeto → Operate → Kubernetes clusters → Connect a cluster). Não usar Personal Access Token pra isso via API mesmo sendo tecnicamente possível — escopo largo demais pra um agent segurar. **Parar aqui**, pedir pro humano gerar 1 token por cluster (2: `esteira-nao-prod` e `esteira-prd-local`) e colar de volta.
 
 No repo do próprio projeto (não em `ai-infra`):
 ```yaml
-# .gitlab/agents/<projeto>-qa-local/config.yaml
+# .gitlab/agents/esteira-nao-prod/config.yaml
 ci_access:
   projects:
     - id: <namespace>/<projeto>
 ```
 
-Instalar o agent dentro de cada cluster correspondente, com o token daquele ambiente:
+Instalar o agent dentro de cada cluster correspondente, com o token daquele cluster (o exemplo é o `esteira-nao-prod`; repetir para o `esteira-prd-local` com o nome e o token dele). O **runner** do GitLab roda na mesma máquina dos clusters (executor Docker) e o deploy passa pelo Agent, que é conexão de saída — nada da máquina é exposto:
 ```powershell
 helm repo add gitlab https://charts.gitlab.io
 helm repo update
-helm upgrade --install <projeto>-qa-local gitlab/gitlab-agent --namespace gitlab-agent --create-namespace --set config.token=<TOKEN_GERADO_NO_GITLAB> --set config.kasAddress=wss://kas.gitlab.com
+helm upgrade --install esteira-nao-prod gitlab/gitlab-agent --namespace gitlab-agent --create-namespace --set config.token=<TOKEN_GERADO_NO_GITLAB> --set config.kasAddress=wss://kas.gitlab.com
 ```
 
 Confirmar: `kubectl get nodes` aparece na aba Kubernetes do projeto no GitLab (conexão de saída, sem porta nenhuma aberta no roteador).
@@ -148,6 +159,6 @@ O que foi instalado no passo 2, os 2 clusters no ar (nomes), os 4 operators conf
 ## Derrubar tudo (só sob pedido explícito)
 
 ```powershell
-k3d cluster delete <projeto>-qa-local
-k3d cluster delete <projeto>-hml-local
+k3d cluster delete esteira-nao-prod
+k3d cluster delete esteira-prd-local
 ```
