@@ -129,7 +129,7 @@ O review com app real usa estes serviços **compartilhados no `esteira-nao-prod`
 
 ## 6b. NetworkPolicy (só `esteira-nao-prod`)
 
-Uma política por namespace (`qa`, `hml`, `preview`, `review-*`) que **nega tráfego entre namespaces** por padrão e libera só o que cada um precisa (Ingress do Traefik; serviços compartilhados, no review). Política própria para o ZAP (DAST ativo no `qa`, passivo no `hml` e em produção depois da Liberação) alcançar **só o namespace alvo**. Aplicar os manifests de NetworkPolicy do `template-ci`/`ai-ops` (versionados), nunca à mão. Produção nunca divide cluster com o que sofre DAST.
+Uma política por namespace (`qa`, `hml`, `preview`, `review-*`) que **bloqueia tráfego vindo de outros namespaces** e libera só o próprio namespace e o Traefik (`kube-system`). Manifesto versionado: [`manifests/networkpolicy-isolamento.yaml`](manifests/networkpolicy-isolamento.yaml). Aplicar esse arquivo em cada namespace (no `review-<fatia>` quem aplica é o `template-ci`), nunca à mão. A política é só de entrada: o app precisa alcançar Postgres, Redis, RabbitMQ e Keycloak. **O ZAP não entra**: ele roda no runner, fora do cluster, e alcança o ambiente pela `APP_URL` (Ingress); o alcance dele é o alvo da varredura. **Conferir ao subir o cluster** (não foi testado) que o controlador de NetworkPolicy do k3s está ligado e que o Traefik está em `kube-system`. Produção nunca divide cluster com o que sofre DAST.
 
 ## 7. GitLab Kubernetes Agent — sempre parar aqui
 

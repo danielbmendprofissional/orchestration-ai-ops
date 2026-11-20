@@ -17,7 +17,7 @@ Pré-requisito: Docker Desktop rodando.
 | `esteira-nao-prod` | `qa`, `hml`, `preview`, `review-<fatia>` | Tudo que **não** é produção. **Não existe namespace `dev`** (ambiente não é branch). `review-<fatia>` só para Fatia de `risco: alto` (app real), no máximo 2 ao mesmo tempo. `preview` hospeda o preview estático do front (um nginx mínimo por MR, sem API nem banco; validade de 7 dias; no máximo 5 ao mesmo tempo) |
 | `esteira-prd-local` | produção | Só produção. Nunca divide cluster com o que sofre DAST |
 
-O isolamento entre `qa`, `hml`, `preview` e `review-*` vem de namespace e **NetworkPolicy**. O ZAP (DAST ativo no `qa`, passivo no `hml` e em produção depois da Liberação) tem política própria: alcança só o namespace alvo.
+O isolamento entre `qa`, `hml`, `preview` e `review-*` vem de namespace e **NetworkPolicy** (entrada só do próprio namespace e do Traefik). O ZAP (DAST ativo no `qa`, passivo no `hml` e em produção depois da Liberação) roda no runner, fora do cluster, e alcança só a URL do ambiente alvo.
 
 ## 1. Instalar k3d
 
@@ -109,7 +109,7 @@ Depois de cada operator instalado, criar 1 `Cluster`/`Redis`/`RabbitmqCluster`/`
 
 ## 5. NetworkPolicy
 
-No cluster `esteira-nao-prod`, uma política por namespace (`qa`, `hml`, `preview`, `review-*`) que **nega tráfego entre namespaces** por padrão e libera só o que cada um precisa (Ingress do Traefik, serviços compartilhados do review). Política própria para o ZAP alcançar apenas o namespace alvo. Rascunho de enforcement e alternativas: `docs-human/ai-base/kubernetes-security.proposto.md`.
+No cluster `esteira-nao-prod`, uma política por namespace (`qa`, `hml`, `preview`, `review-*`) que **bloqueia tráfego vindo de outros namespaces** e libera só o próprio namespace e o Traefik. Manifesto versionado em `ai-ops/agents/infra/local-environment-config/docs/infra/manifests/networkpolicy-isolamento.yaml` (não testado: conferir o controlador do k3s ao subir o cluster). Não há política para o ZAP: ele roda no runner e alcança o ambiente pela `APP_URL`. Rascunho de enforcement e alternativas: `docs-human/ai-base/kubernetes-security.proposto.md`.
 
 ## 6. GitLab Kubernetes Agent — um por cluster
 

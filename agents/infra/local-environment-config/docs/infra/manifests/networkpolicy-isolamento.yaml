@@ -1,0 +1,36 @@
+# NetworkPolicy do cluster `esteira-nao-prod` (ADR-0020, ADR-0025): isola os namespaces
+# qa, hml, preview e review-<fatia> entre si.
+#
+# Só de ENTRADA: cada namespace aceita tráfego do próprio namespace e do Traefik (no k3s,
+# namespace kube-system). Não restringe saída: o app precisa alcançar Postgres, Redis, RabbitMQ
+# e Keycloak. Os serviços compartilhados do review ficam em namespaces sem esta política.
+#
+# O ZAP NÃO entra aqui: ele roda no runner (fora do cluster) e alcança o ambiente pela APP_URL,
+# via Ingress. O alcance dele é o alvo da varredura (-t), não esta política.
+#
+# Aplicar (nunca à mão, um namespace por vez):
+#   for ns in qa hml preview; do
+#     kubectl --context k3d-esteira-nao-prod -n "$ns" apply -f networkpolicy-isolamento.yaml
+#   done
+# review-<fatia>: o template-ci aplica este mesmo arquivo ao criar o namespace.
+#
+# CONFERIR ao subir o cluster (não testado): o k3s traz o controlador de NetworkPolicy
+# (kube-router) ligado, e o Traefik fica em kube-system. Se o k3d for criado sem eles, a política
+# não é aplicada, ou bloqueia o Ingress. Teste: de um pod em outro namespace, o curl ao Service
+# do qa deve falhar; pelo Ingress (Traefik) deve funcionar.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isola-namespace
+  labels:
+    esteira/tipo: isolamento
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
