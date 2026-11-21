@@ -27,6 +27,7 @@ Pré-requisito: `claude --version` responde; OmniRoute saudável com os combos `
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "omni-pago",
     "ANTHROPIC_DEFAULT_HAIKU_MODEL": "omni-free",
     "MAX_THINKING_TOKENS": "0",
+    "CLAUDE_CODE_MAX_CONTEXT_TOKENS": "200000",
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
     "DISABLE_TELEMETRY": "1",
     "_CLAUDE_CODE_ASSUME_FIRST_PARTY_BASE_URL": "0"
@@ -36,6 +37,7 @@ Pré-requisito: `claude --version` responde; OmniRoute saudável com os combos `
 
 - `MAX_THINKING_TOKENS: 0` — DeepSeek e Luna só aceitam o histórico um do outro sem raciocínio (`ai-infra/configs/omniroute/combos.md`).
 - `_CLAUDE_CODE_ASSUME_FIRST_PARTY_BASE_URL: 0` — neutraliza a flag se ela estiver ligada no `~/.claude/settings.json`: o OmniRoute nunca pode ser tratado como a Anthropic.
+- `CLAUDE_CODE_MAX_CONTEXT_TOKENS: 200000` — o Claude Code não conhece `omni-pago`/`omni-free` (nomes de combo do OmniRoute) e, sem isto, avisa *"Model … isn't recognized · context assumed to be 200k tokens"* a cada sessão. Declarar a janela faz o aviso sumir. **200000 é conservador** (é o que ele já assumia): a janela real dos combos não está registrada em `ai-infra/configs/omniroute/`; se o painel do OmniRoute mostrar uma maior, subir o valor aqui nos dois arquivos.
 - `~/.claude/settings.json` (RTK, login, preferências) **não é alterado**.
 
 ## 2. Atalhos no perfil do PowerShell — agent executa

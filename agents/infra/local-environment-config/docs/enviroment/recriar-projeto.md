@@ -106,7 +106,7 @@ Spec que já existe de rodada anterior: Modificar (atualizar checklist — marca
 
 ### Bloco D — ferramental
 
-Os "Passos (novo e existente)" 2 a 8 do `CLAUDE.md` (`.mcp.json`, skills, impeccable, Playwright, skills de segurança, smoke test) — sem mudança.
+Os "Passos (novo e existente)" 2 a 9 do `CLAUDE.md` (`.mcp.json`, skills, impeccable, Playwright, skills de segurança, **terminais do VS Code**, smoke test) — sem mudança, exceto o passo 8: `.vscode/tasks.json` e `dev.ps1` ausentes são candidatos a Adicionar, e o agent segue `docs/enviroment/terminais-vscode.md` (pergunta o layout, confirma caminhos e pede o "sim" próprio, porque a configuração liga comandos sozinha).
 
 ## 3. Executar
 
