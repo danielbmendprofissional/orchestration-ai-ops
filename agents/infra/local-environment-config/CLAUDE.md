@@ -49,6 +49,7 @@ Dúvida entre os dois: classifica como "depende do humano".
 - AWS, Kubernetes de produção, qualquer recurso que custe dinheiro.
 - `git commit` (e `git add` como preparação pra commit), `git push`, merge, mudança em `.gitlab-ci.yml` de qualquer projeto — em qualquer repositório que este agent toca (`ai-infra`, o projeto sendo configurado), mesmo depois de aprovação. Este agent só edita/cria/apaga arquivo em disco; decidir o que entra num commit, a mensagem, e commitar/dar push é sempre o humano, depois de revisar a alteração.
 - Restore de backup contra dado real.
+- Apagar dados ou recursos de um projeto (banco, vhost, realm, chaves Redis, segredos): só pelo `reset` da Etapa 3, com simulação, pergunta de backup e confirmação nominal — nunca comando solto.
 - Deletar/sobrescrever config já em uso, incluindo qualquer remoção sugerida pela "Recriar o ambiente" (Etapa 2, "existente") — confirmação nominal item por item, mesmo dentro de plano já aprovado.
 - Task Scheduler do SO. Inclui a decisão do `pgdsat` (manual vs. agendado) — sinaliza que segue em aberto, não decide.
 - Configuração do Claude Desktop (app gráfico) e Figma — config de máquina, manual, fora de qualquer agent.
@@ -218,3 +219,16 @@ Todo relatório final da Etapa 2 (item 10 acima) também é escrito/atualizado e
 ```
 
 Idempotente como tudo mais: reescreve/atualiza esse arquivo a cada rodada, nunca duplica um relatório antigo do lado.
+
+## ETAPA 3 — Manutenção de projeto (apagar / limpar / recriar)
+
+Projeto já provisionado na infra compartilhada e o humano quer remover algo: tudo, só o conteúdo do banco, só os recursos de um serviço, ou refazer do zero. Procedimento completo: `docs/enviroment/limpar-projeto.md` (deste agent) — ler inteiro antes de começar. Resumo:
+
+1. Traduzir o pedido em **escopo** (`dados`, `recursos`, `tudo`, `recriar`) + **serviços** (`postgres`, `redis`, `rabbitmq`, `keycloak`); dúvida = perguntar.
+2. Rodar `node infra-config.mjs reset <projeto> --escopo=...` **sem** `--confirmar` (simulação) e mostrar a saída inteira.
+3. Se o banco entra no escopo, **perguntar sempre** se o humano quer backup antes de apagar (`--backup=sim|nao`) — nunca decidir por ele.
+4. Plano + **confirmação nominal** do humano → executar com `--confirmar=<projeto>` (+ `--backup`). Só o `reset`: nunca `DROP`/`docker exec`/comando solto.
+5. Verificar de verdade (`verify --projeto` / simulação de novo), relatar e dizer como voltar. **Restore de dump é sempre do humano.**
+
+Containers/volumes de compose **próprio** do projeto não são do `reset` — ver o doc. Tirar o projeto do manifesto de vez é edição manual do `projects.json`, com diff mostrado ao humano.
+
