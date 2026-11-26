@@ -39,6 +39,7 @@ Pré-requisito: `claude --version` responde; OmniRoute saudável com os combos `
 - `_CLAUDE_CODE_ASSUME_FIRST_PARTY_BASE_URL: 0` — neutraliza a flag se ela estiver ligada no `~/.claude/settings.json`: o OmniRoute nunca pode ser tratado como a Anthropic.
 - `CLAUDE_CODE_MAX_CONTEXT_TOKENS: 200000` — o Claude Code não conhece `omni-pago`/`omni-free` (nomes de combo do OmniRoute) e, sem isto, avisa *"Model … isn't recognized · context assumed to be 200k tokens"* a cada sessão. Declarar a janela faz o aviso sumir. **200000 é conservador** (é o que ele já assumia): a janela real dos combos não está registrada em `ai-infra/configs/omniroute/`; se o painel do OmniRoute mostrar uma maior, subir o valor aqui nos dois arquivos.
 - `~/.claude/settings.json` (RTK, login, preferências) **não é alterado**.
+- Permissões (`bypassPermissions` + `deny`) **não estão no template acima**: são opcionais e dependem do humano, ver seção 4.
 
 ## 2. Atalhos no perfil do PowerShell — agent executa
 
@@ -66,3 +67,32 @@ claude --settings "$HOME\.claude\modos\pago.json" -p "Responda apenas: funcionan
 - O "custo" que o Claude Code mostra nesses modos é estimativa pela tabela da Anthropic — o real está no painel do OmniRoute.
 
 Falhou com 401: `OMNIROUTE_API_KEY` ausente ou de outra instância (`apply --setx` de novo). Sem resposta: OmniRoute fora (`infra-config.mjs up`).
+
+## 4. Permissões sem prompt (OPCIONAL) — depende do humano
+
+**Por que existe:** o *auto mode* do Claude Code depende de um classificador de segurança no servidor da Anthropic, que o OmniRoute (`localhost:20128`) não repassa. Nos modos `claude-pago`/`claude-free` ele nunca funciona: cada ação cai em pedido de aprovação manual, o que inviabiliza deixar o `/implement-task` rodando sozinho. Além disso, o hook `rtk hook claude` reescreve os comandos Bash, e no auto mode isso invalida a revisão do classificador.
+
+**Item opcional, nunca padrão.** Perguntar ao humano: "quer rodar `claude-pago`/`claude-free` sem pedir aprovação (modo `bypassPermissions`)?". Mostrar a lista `deny` abaixo inteira e só gravar com o **sim explícito**. Se `pago.json`/`free.json` já tiverem `permissions`, é config em uso: mostrar o diff e pedir confirmação nominal, nunca sobrescrever.
+
+Acrescentar nos **dois** arquivos (`pago.json` e `free.json`), ao lado de `model`/`env`:
+
+```json
+"permissions": {
+  "defaultMode": "bypassPermissions",
+  "deny": [
+    "Bash(rm -rf *)", "Bash(rm -r *)", "Bash(kubectl *)", "Bash(psql *)", "Bash(redis-cli *)",
+    "Bash(wget *)", "Bash(npm publish *)", "Bash(glab mr merge *)",
+    "Bash(git push * HEAD:main*)", "Bash(git push * HEAD:master*)",
+    "Read(**/.env*)", "Edit(**/.env*)",
+    "Edit(C:/Users/<usuario>/.claude/**)"
+  ]
+}
+```
+
+- **`Write(...)` não é regra válida** (o Claude Code avisa *"Deny rule Write(...) never matches"*): `Edit(...)` já cobre Write. Nunca colocar `Write(...)` no `deny`.
+- **`docker` e `curl` ficam fora do `deny` de propósito:** teste de integração de uma fatia pode precisar deles. Quem quiser bloquear acrescenta à mão.
+- **`dotnet`, `npm`, `npx` e `git` nunca entram no `deny`:** testes e build de toda fatia dependem deles.
+- **O `deny` não é sandbox.** `bash -c`/`python -c` contornam lista de comandos. A proteção real é: hook `.claude/hooks/block-dangerous-git.sh` do projeto (cobre só git destrutivo e push direto em `main`/`master`; `git push origin HEAD:main` escapa dele, por isso a regra no `deny`), proteção de branch `main` no GitLab, worktree por fatia (`worktree-fatia.mjs`) e o isolamento de banco por projeto do `ai-infra`. Deixar isso dito ao humano.
+- **O `claude` normal (assinatura) não é alterado:** a regra só vale nos modos via OmniRoute, porque mora em `~/.claude/modos/*.json`.
+
+Verificar de verdade: abrir um `claude-pago` **novo** (a sessão antiga continua no modo antigo); não pode aparecer aviso de deny inválido, e um `ls`/`git status` tem que rodar sem pedir aprovação. Aparece um aviso de confirmação de bypass na primeira vez: o humano aceita.
